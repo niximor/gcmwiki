@@ -45,7 +45,7 @@ class Debugger {
 
 		if ($exc instanceof \drivers\mysql\QueryException) {
 			echo '<dt style="background-color: #436F9C; color: white; font-weight: bold; font-size: 1.2em; padding: 0.2em 0.5em;">Query</dt>';
-			echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;">'.$exc->getQuery().'</dd>';
+			echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;"><pre>'.$exc->getQuery().'</pre></dd>';
 		}
 
 		echo '<dt style="background-color: #436F9C; color: white; font-weight: bold; font-size: 1.2em; padding: 0.2em 0.5em;">Stack trace</dt>';
