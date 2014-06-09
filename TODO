@@ -1,0 +1,8 @@
+* Comments
+* Attachments
+* Wiki formatting
+	- Linkage between pages, and if changed, re-render all child pages.
+
+* Test page hierarchy
+* Test duplicate names (of users, of groups, whether it triggers correct error messages)
+* Test HTML in names
