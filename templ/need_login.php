@@ -1,0 +1,1 @@
+You need to <a href="<?php echo $this->url("/wiki:login"); ?>">log-in</a> to access this page.

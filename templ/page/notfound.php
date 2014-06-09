@@ -1,0 +1,1 @@
+Page <?php echo $PageName; ?> was not found. <a href="<?php echo $this->url($this->getSelf()."?edit"); ?>">Create?</a>

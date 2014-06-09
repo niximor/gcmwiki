@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /
+
+#
+# Redirect everything that does not exists to index, which processes the page.
+#
+RewriteCond %{REQUEST_FILENAME} !/static
+RewriteCond %{REQUEST_FILENAME} !/index.php
+RewriteRule ^(.*)$ index.php/$1     [L,QSA]

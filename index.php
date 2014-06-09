@@ -1,0 +1,71 @@
+<?php
+
+require_once "wiki/wiki.php";
+require_once "wiki/view/Template.php";
+
+// Parse URL and load apropriate wiki pages
+$path = preg_split("#/+#", preg_replace('#^/|/$#', '', $_SERVER["PATH_INFO"]));
+if (!empty($path) && empty($path[0])) $path = array();
+
+$be = Config::Get("__Backend");
+
+$page = new \view\RootTemplate("design.php");
+$page->setSelf("/".implode("/", $path));
+
+try {
+	// MVC special pages
+	foreach ($path as $key=>$part) {
+		if (($pos = strpos($part, ':')) !== false) {
+			$special = substr($part, 0, $pos);
+			$method = substr($part, $pos + 1);
+
+			$params = array_slice($path, $key + 1);
+			if ($key > 0) {
+				$path = array_slice($path, 0, $key - 1);
+			} else {
+				$path = array();
+			}
+
+			break;
+		}
+	}
+
+	if (isset($special)) {
+		if (count($path) > 0) {
+			$wikiPage = $be->loadPage($path);
+		} else {
+			$wikiPage = NULL;
+		}
+
+		$sp = Config::getSpecial($special);
+		$controller = new $sp($page, $wikiPage);
+
+		if (method_exists($controller, $method)) {
+			call_user_func_array(array($controller, $method), $params);
+		} else {
+			throw new UnknownSpecialPage();
+		}
+	} else {
+		$method = "page";
+		$keys = array_keys($_GET);
+		if (count($keys) > 0 && empty($_GET[$keys[0]])) {
+			$method = $keys[0];
+		}
+
+		$controller = new \specials\WikiController($page, $path);
+		if (method_exists($controller, $method)) {
+			call_user_func(array($controller, $method), $path);
+		} else {
+			throw new UnknownSpecialPage();
+		}
+	}
+} catch (UnknownSpecialPage $e) {
+	$child = new Template("no_special.php");
+	$child->addVariable("PageName", $special.":".$method);
+	$page->setChild($child);
+}
+
+$page->render();
+
+\lib\Session::Free();
+
