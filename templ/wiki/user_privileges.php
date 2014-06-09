@@ -1,6 +1,7 @@
 <h1>Privileges of user <?php echo htmlspecialchars($User->name); ?></h1>
 
 <form action="<?php echo $this->url($this->getSelf()); ?>" method="post">
+<input type="hidden" name="privileges" value="<?php echo $User->getId(); ?>" />
 <table>
 	<thead>
 		<tr>

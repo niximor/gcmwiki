@@ -83,6 +83,8 @@ interface Storage {
 
     function listUsers(\models\Group $inGroup = NULL, $additionalColumns = array());
     function listGroups(\models\User $ofUser = NULL, $additionalColumns = array());
+    function listUsersOfPrivilege(\models\SystemPrivilege $privilege);
+
     function listDefaultPrivileges();
     function listUserPrivileges(\models\User $user);
     function listGroupPrivileges(\models\Group $group);

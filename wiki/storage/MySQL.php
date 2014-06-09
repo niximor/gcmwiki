@@ -978,6 +978,110 @@ class MySQL implements Storage {
 
         $trans->commit();
     }
+
+    function listUsersOfPrivilege(\models\SystemPrivilege $privilege) {
+        $trans = $this->db->beginRO();
+
+        $res = $trans->query("SELECT
+                id AS privilege_id,
+                NULL AS user_id,
+                NULL AS group_id,
+                sp.default_value AS value
+            FROM system_privileges sp WHERE id = %s
+
+            UNION
+
+            SELECT
+                spg.privilege_id AS privilege_id,
+                ug.user_id,
+                ug.group_id,
+                spg.value
+            FROM user_group ug
+            JOIN system_privileges_group spg ON (spg.group_id = ug.group_id AND spg.privilege_id = %s)
+
+            UNION
+
+            SELECT
+                spu.privilege_id AS privilege_id,
+                spu.user_id,
+                NULL AS group_id,
+                spu.value AS value
+            FROM system_privileges_user spu WHERE spu.privilege_id = %s",
+            $privilege->getId(), $privilege->getId(), $privilege->getId());
+
+        $map = array();
+
+        $groupsToFetch = array();
+
+        foreach ($res as $row) {
+            if (is_null($row->user_id) && is_null($row->group_id)) {
+                $priv = new \models\SystemPrivilege;
+                $priv->setId($row->privilege_id);
+                $priv->setValue($row->value);
+            } elseif (!is_null($row->group_id)) {
+                $priv = new \models\GroupSystemPrivilege;
+                $priv->setPrivilege_id($row->privilege_id);
+                $priv->setGroup_id($row->group_id);
+                $priv->setValue($row->value);
+
+                $groupsToFetch[] = $row->group_id;
+            } else {
+                $priv = new \models\UserSystemPrivilege;
+                $priv->setPrivilege_id($row->privilege_id);
+                $priv->setUser_id($row->user_id);
+                $priv->setValue($row->value);
+            }
+
+            $map[$row->user_id] = $priv;
+        }
+
+        $groupsMap = array();
+        if (!empty($groupsToFetch)) {
+            $strings = array();
+            $values = array();
+
+            foreach ($groupsToFetch as $gId) {
+                $strings[] = "%s";
+                $values[] = $gId;
+            }
+            
+            $res = $trans->query("SELECT id, name FROM groups WHERE id IN (".implode(", ", $strings).")", $values);
+            $res->setClassFactory("\\models\\Group");
+            foreach ($res as $row) {
+                $groupsMap[$row->id] = $row;
+            }
+        }
+
+        $out = array();
+        if (!empty($map)) {
+            $strings = array();
+            $values = array();
+
+            foreach ($map as $key=>$val) {
+                if (!is_null($key)) {
+                    $strings[] = "%s";
+                    $values[] = $key;
+                }
+            }
+
+            $res = $trans->query("SELECT id, name FROM users WHERE id IN (".implode(", ", $strings).") ORDER BY name ASC", $values);
+            $res->setClassFactory("\\models\\UserAppliedPrivilege");
+            foreach ($res as $row) {
+                $priv = $map[$row->id];
+                $row->priv_source = $priv;
+
+                if ($priv instanceof \models\GroupSystemPrivilege) {
+                    $priv->group = $groupsMap[$priv->group_id];
+                }
+
+                $out[] = $row;
+            }
+        }
+
+        $trans->commit();
+
+        return array($map[NULL], $out);
+    }
 }
 
 class DBSessionStorage implements \lib\SessionStorage {

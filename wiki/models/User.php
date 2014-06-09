@@ -95,3 +95,7 @@ class User extends Model {
     }
 }
 
+class UserAppliedPrivilege extends User {
+    protected $priv_source;
+}
+

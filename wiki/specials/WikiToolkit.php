@@ -504,11 +504,27 @@ class WikiToolkit extends SpecialController {
 			}
 
 			if (isset($_REQUEST["listPrivilege"])) {
-				$child = new \view\Template("wiki/list_privilege.php");
-				$child->addVariable("Users", );
-				$child->addVariable("Groups", );
+				$found = false;
+				foreach ($DefaultPrivileges as $priv) {
+					if ($priv->getId() == $_REQUEST["listPrivilege"]) {
+						$child = new \view\Template("wiki/list_privilege.php");
 
-				$this->template->setChild($child);
+						list($default, $users) = $be->listUsersOfPrivilege($priv);
+
+						$child->addVariable("Privilege", $priv);
+						$child->addVariable("DefaultValue", $default);
+						$child->addVariable("Users", $users);
+
+						$this->template->setChild($child);
+						$found = true;
+						break;
+					}
+				}
+
+				if (!$found) {
+					$child = new \view\Template("wiki/not_found.php");
+					$this->template->setChild($child);
+				}
 			} else {
 				$child = new \view\Template("wiki/config.php");
 				$child->addVariable("Privileges", $DefaultPrivileges);

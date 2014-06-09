@@ -18,5 +18,7 @@ class UserSystemPrivilege extends SystemPrivilege {
 class GroupSystemPrivilege extends SystemPrivilege {
     protected $group_id;
     protected $privilege_id;
+
+    protected $group;
 }
 
