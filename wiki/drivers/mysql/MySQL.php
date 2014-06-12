@@ -191,6 +191,7 @@ class Transaction {
 		}
 
 		//echo $query."<br />";
+
 		$result = $link->query($query);
 		if ($link->errno != 0) {
 			throw new QueryException($link, $query);

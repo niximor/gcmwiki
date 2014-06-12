@@ -1,7 +1,6 @@
 <?php
 
-class UnknownSpecialPage extends Exception {
-}
+require_once "view/exceptions.php";
 
 class Config {
 	private static $options = array();

@@ -20,6 +20,8 @@ class WikiPage extends Model {
 
 	protected $parent;
 
+	public $User;
+
 	public function updateBody($wikiText) {
 		$this->setBody_wiki($wikiText);
 

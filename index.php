@@ -20,12 +20,13 @@ try {
 			$method = substr($part, $pos + 1);
 
 			$params = array_slice($path, $key + 1);
+
 			if ($key > 0) {
-				$path = array_slice($path, 0, $key - 1);
+				$path = array_slice($path, 0, $key);
 			} else {
 				$path = array();
 			}
-
+			
 			break;
 		}
 	}
@@ -43,7 +44,7 @@ try {
 		if (method_exists($controller, $method)) {
 			call_user_func_array(array($controller, $method), $params);
 		} else {
-			throw new UnknownSpecialPage();
+			throw new \view\UnknownSpecialPage();
 		}
 	} else {
 		$method = "page";
@@ -56,12 +57,20 @@ try {
 		if (method_exists($controller, $method)) {
 			call_user_func(array($controller, $method), $path);
 		} else {
-			throw new UnknownSpecialPage();
+			throw new \view\UnknownSpecialPage();
 		}
 	}
-} catch (UnknownSpecialPage $e) {
-	$child = new Template("no_special.php");
+} catch (\view\UnknownSpecialPage $e) {
+	$child = new \view\Template("no_special.php");
 	$child->addVariable("PageName", $special.":".$method);
+	$page->setChild($child);
+} catch (\view\NotFound $e) {
+	$child = new \view\Template("wiki/not_found.php");
+	$child->addVariable("Exception", $e);
+	$page->setChild($child);
+} catch (\view\AccessDenided $e) {
+	$child = new \view\Template("need_privileges.php");
+	$child->addVariable("Exception", $e);
 	$page->setChild($child);
 }
 

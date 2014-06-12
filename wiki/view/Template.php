@@ -11,9 +11,11 @@ class Template {
 	protected $variables = array();
 	protected $self;
 
-	function __construct($file) {
+	function __construct($file, Template $parent = NULL) {
 		$file = dirname(__FILE__)."/../../templ/".$file;
 		$this->file = $file;
+
+		if (!is_null($parent)) $this->parent = $parent;
 	}
 
 	function setChild(Template $child) {

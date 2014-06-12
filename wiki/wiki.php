@@ -14,6 +14,7 @@ require_once "lib/debugger.php";
 // Basic classes
 require_once "lib/Sessions.php";
 require_once "view/Messages.php";
+require_once "view/exceptions.php";
 
 // Site configuration
 $config_dir = dirname(__FILE__)."/../config/";

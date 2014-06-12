@@ -1,5 +1,4 @@
 <h1><?php echo $Page->getName(); ?></h1>
-
 <form action="<?php echo $this->url($this->getSelf()); ?>" method="get">
 <input type="hidden" name="diff" value="" />
 <table>
@@ -9,6 +8,7 @@
 			<th colspan="2">Diff</th>
 			<th></th>
 			<th>Date</th>
+			<th>Author</th>
 			<th>Comment (* - small change)</th>
 		</tr>
 	</thead>
@@ -19,6 +19,7 @@
 			<td>&nbsp;</td>
 			<td><a href="<?php echo $this->url($this->getSelf()); ?>">Show</a></td>
 			<td><?php echo $Page->last_modified; ?></td>
+			<td><?php echo $Page->User->profileLink($this); ?></td>
 			<td>(current) <?php if ($Page->small_change) echo "* "; echo htmlspecialchars($Page->summary); ?></td>
 		</tr>
 		<?php
@@ -32,6 +33,7 @@
 			<td><input type="radio" name="b" value="<?php echo $Page->revision; ?>" /></td>
 			<td><a href="<?php echo $this->url($this->getSelf()); ?>?revision=<?php echo $Page->revision; ?>">Show</a></td>
 			<td><?php echo $Page->last_modified; ?></td>
+			<td><?php echo $Page->User->profileLink($this); ?></td>
 			<td><?php if ($Page->small_change) echo "* "; echo htmlspecialchars($Page->summary); ?></td>
 		</tr>
 		<?php

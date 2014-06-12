@@ -4,6 +4,8 @@ namespace storage;
 
 require_once "storage/storage.php";
 require_once "drivers/mysql/MySQL.php";
+require_once "models/WikiPage.php";
+require_once "models/WikiHistoryEntry.php";
 require_once "models/User.php";
 require_once "models/Group.php";
 require_once "models/SystemPrivilege.php";
@@ -54,10 +56,14 @@ class MySQL implements Storage {
             $part = $path[$i];
 
             if ($i == $part_len - 1) {
-                $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id"), $requiredColumns);
+                $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
             } else {
                 $columns = array("id");
             }
+
+            array_walk($columns, function(&$a) { $a = "p.".$a; });
+
+            $columns[] = "u.name AS user_name";
 
             if (!is_null($revision)) {
                 $table = "wiki_pages_history";
@@ -70,15 +76,41 @@ class MySQL implements Storage {
             if (is_null($parent)) {
                 $res = $trans->query("SELECT ".implode(",", $columns)." FROM ".$table." p
                     LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)
+                    LEFT JOIN users u ON (p.user_id = u.id)
                     WHERE url = %s AND ph.parent_id IS NULL".$where, $part);
             } else {
                 $res = $trans->query("SELECT ".implode(",", $columns)." FROM ".$table." p
                     LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)
+                    LEFT JOIN users u ON (p.user_id = u.id)
                     WHERE url = %s AND ph.parent_id = %s".$where, $part, $parent->id);
             }
 
             try {
-                $page = $res->fetch("\\models\\WikiPage");
+                $row = $res->fetch();
+
+                $page = new \models\WikiPage;
+
+                if (isset($row->id)) $page->id = $row->id;
+                if (isset($row->name)) $page->name = $row->name;
+                if (isset($row->url)) $page->url = $row->url;
+                if (isset($row->created)) $page->created = $row->created;
+                if (isset($row->last_modified)) $page->last_modified = $row->last_modified;
+                if (isset($row->user_id)) $page->user_id = $row->user_id;
+                if (isset($row->revision)) $page->revision = $row->revision;
+                if (isset($row->body_wiki)) $page->body_wiki = $row->body_wiki;
+                if (isset($row->body_html)) $page->body_html = $row->body_html;
+                if (isset($row->summary)) $page->summary = $row->summary;
+                if (isset($row->small_change)) $page->small_change = $row->small_change;
+
+                if ($page->user_id > 0) {
+                    $page->User = new \models\User;
+                    $page->User->id = $row->user_id;
+                    $page->User->name = $row->user_name;
+                } else {
+                    $page->User = new \models\FakeUser;
+                    $page->User->ip = $row->ip;
+                }
+
                 $page->setParent($parent);
                 $parent = $page;
             } catch (\drivers\EntryNotFoundException $e) {
@@ -170,14 +202,33 @@ class MySQL implements Storage {
     function getHistorySummary($pageId) {
         $trans = $this->db->beginRO();
 
-        $res = $trans->query("SELECT id, revision, last_modified, user_id, small_change, summary
-            FROM wiki_pages_history
+        $res = $trans->query("SELECT h.id, h.revision, h.last_modified, h.user_id, h.small_change, h.summary,
+            u.name AS user_name, h.ip
+            FROM wiki_pages_history h
+            LEFT JOIN users u ON (h.user_id = u.id)
             WHERE page_id = %s
             ORDER BY revision DESC", $pageId);
 
         $result = array();
         foreach ($res as $row) {
-            $result[] = $row;
+            $item = new \models\WikiHistoryEntry;
+            $item->id = $row->id;
+            $item->revision = $row->revision;
+            $item->last_modified = $row->last_modified;
+            $item->user_id = $row->user_id;
+            $item->small_change = $row->small_change;
+            $item->summary = $row->summary;
+
+            if ($row->user_id > 0) {
+                $item->User = new \models\User;
+                $item->User->id = $row->user_id;
+                $item->User->name = $row->user_name;
+            } else {
+                $item->User = new \models\FakeUser;
+                $item->User->ip = $row->ip;
+            }
+
+            $result[] = $item;
         }
 
         $trans->commit();
@@ -1081,6 +1132,167 @@ class MySQL implements Storage {
         $trans->commit();
 
         return array($map[NULL], $out);
+    }
+
+    function storeComment(\models\Comment $comment) {
+        $trans = $this->db->beginRW();
+
+        $diag = new Diagnostics();
+
+        // Try if there is no registered user of the same name
+        if (!is_null($comment->anonymous_name)) {
+            $res = $trans->query("SELECT id FROM users WHERE name = %s", $comment->anonymous_name);
+            try {
+                $res->fetch();
+                $diag->addError("anonymous_name", "anonymous_name_cannot_be_registered", "This user name is registered in the wiki. You cannot post as a registered user.");
+            } catch (\drivers\EntryNotFoundException $e) {
+            }
+        }
+
+        // Verify parent ID
+        if (!is_null($comment->parent_id)) {
+            $res = $trans->query("SELECT id FROM comments WHERE id = %s", $comment->parent_id);
+            if (is_null($res->fetch())) {
+                $diag->addError("parent_id", "parent_id_must_exists", "Comment parent does not exists.");
+            }
+        }
+
+        // Verify text emptiness
+        if ($comment->text_html == "" || $comment->text_wiki == "") {
+            $diag->addError("text_wiki", "text_wiki_cannot_be_empty", "Comment text cannot be empty.");
+        }
+
+        if ($diag->getErrors()) {
+            $trans->rollback();
+            throw $diag;
+        }
+
+        if (!is_null($comment->getId())) {
+            $trans->query("INSERT INTO comments_history (comment_id, revision, last_modified, user_id,      ip, text_wiki, text_html)
+                            SELECT                       id,         revision, last_modified, edit_user_id, ip, text_wiki, text_html)
+                            FROM comments WHERE id = %s", $comment->getId());
+
+            $vals = array();
+            $cols = array();
+
+            foreach ($comment->listChanged as $col) {
+                $cols[] = $col." = %s";
+                $vals[] = $comment->$col;
+            }
+
+            $cols[] = "ip = %s";
+            $vals[] = \lib\Session::IP();
+
+            $cols[] = "last_modified = NOW()";
+
+            $vals[] = $comment->getId();
+            $trans->query("UPDATE comments SET ".implode(",", $cols)." WHERE id = %s", $vals);
+        } else {
+            $trans->query("INSERT INTO comments (page_id, revision, owner_user_id, edit_user_id,
+                anonymous_name, ip, parent_id, created, last_modified, text_wiki, text_html) VALUES
+                (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)",
+                $comment->page_id, $comment->revision, $comment->owner_user_id, $comment->edit_user_id,
+                $comment->anonymous_name, \lib\Session::IP(), $comment->parent_id, $comment->text_wiki,
+                $comment->text_html);
+        }
+
+        $trans->commit();
+    }
+
+    function loadComments(\models\WikiPage $page) {
+        $trans = $this->db->beginRO();
+
+        $res = $trans->query("SELECT c.id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
+            c.ip, c.parent_id, c.created, c.last_modified, c.text_html,
+            uo.name AS owner_user_name, ue.name AS edit_user_name
+            FROM comments c
+            LEFT JOIN users uo ON (c.owner_user_id = uo.id)
+            LEFT JOIN users ue ON (c.edit_user_id = ue.id)
+            WHERE page_id = %s", $page->getId());
+
+        // Build comments hierarchy
+        $comments = array();
+        $comments_by_id = array();
+
+        foreach ($res as $row) {
+            if (!isset($comments[$row->parent_id])) {
+                $comments[$row->parent_id] = array();
+            }
+
+            $comment = new \models\Comment;
+            $comment->id = $row->id;
+            $comment->revision = $row->revision;
+
+            if ($row->owner_user_id > 0) {
+                $comment->OwnerUser = new \models\User;
+                $comment->OwnerUser->id = $row->owner_user_id;
+                $comment->OwnerUser->name = $row->owner_user_name;
+            } else {
+                $comment->OwnerUser = new \models\FakeUser;
+                $comment->OwnerUser->name = $row->anonymous_name;
+                $comment->OwnerUser->ip = $row->ip;
+            }
+
+            $comment->created = $row->created;
+            $comment->last_modified = $row->last_modified;
+            $comment->text_html = $row->text_html;
+            $comment->clearChanged();
+
+            $comments[$row->parent_id][] = $comment;
+            $comments_by_id[$row->id] = $comment;
+        }
+
+        foreach ($comments as $parent=>&$childs) {
+            if (empty($parent)) $parent = NULL;
+            if (!is_null($parent)) {
+                $comments_by_id[$parent]->childs = &$childs;
+            }
+        }
+
+        $trans->commit();
+
+        if (isset($comments[NULL])) {
+            return $comments[NULL];
+        } else {
+            return array();
+        }
+    }
+
+    function loadComment($commentId) {
+        $trans = $this->db->beginRO();
+
+        $res = $trans->query("SELECT c.id, c.page_id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
+            c.ip, c.created, c.last_modified, c.text_html, uo.name AS owner_user_name, ue.name AS edit_user_name
+            FROM comments c
+            LEFT JOIN users uo ON (c.owner_user_id = uo.id)
+            LEFT JOIN users ue ON (c.edit_user_id = ue.id)
+            WHERE c.id = %s", $commentId);
+
+        $row = $res->fetch();
+
+        $comment = new \models\Comment;
+        $comment->id = $row->id;
+        $comment->page_id = $row->page_id;
+        $comment->revision = $row->revision;
+
+        if ($row->owner_user_id > 0) {
+            $comment->OwnerUser = new \models\User;
+            $comment->OwnerUser->id = $row->owner_user_id;
+            $comment->OwnerUser->name = $row->owner_user_name;
+        } else {
+            $comment->OwnerUser = new \models\FakeUser;
+            $comment->OwnerUser->name = $row->anonymous_name;
+            $comment->OwnerUser->ip = $row->ip;
+        }
+
+        $comment->created = $row->created;
+        $comment->last_modified = $row->last_modified;
+        $comment->text_html = $row->text_html;
+        $comment->clearChanged();
+
+        $trans->commit();
+
+        return $comment;
     }
 }
 

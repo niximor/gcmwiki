@@ -93,9 +93,25 @@ class User extends Model {
 
         return $this->privileges;
     }
+
+    function profileLink(\view\Template $template) {
+        return "<a href=\"".$template->url("/wiki:user/".$this->getName())."\">".htmlspecialchars($this->getName())."</a>";
+    }
 }
 
 class UserAppliedPrivilege extends User {
     protected $priv_source;
+}
+
+class FakeUser extends User {
+    protected $ip;
+
+    function profileLink(\view\Template $template) {
+        if (!is_null($this->name)) {
+            return sprintf("%s (%s)", htmlspecialchars($this->getName()), $this->getIp());
+        } else {
+            return htmlspecialchars($this->getIp());
+        }
+    }
 }
 

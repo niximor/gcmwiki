@@ -32,11 +32,14 @@ class WikiController extends SpecialController {
 			}
 
 			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+
+			$comments = $be->loadComments($wikiPage);
 			
 			if ($acl->page_read) {
 				$child = new \view\Template("page/index.php");
 				$child->addVariable("Page", $wikiPage);
 				$child->addVariable("Acl", $acl);
+				$child->addVariable("Comments", $comments);
 
 				$this->template->setChild($child);
 			} else {
@@ -138,7 +141,7 @@ class WikiController extends SpecialController {
 			$this->template->redirect($this->template->getSelf());
 		} catch (\storage\Diagnostics $e) {
 			\lib\Session::Set("Errors", $e->getErrorsForFields(), false);
-			\lib\Session::Set("Form", $_POST);
+			\lib\Session::Set("Form", $_POST, false);
 			$this->template->redirect($this->template->getSelf()."?edit");
 		}
 	}

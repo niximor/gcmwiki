@@ -95,4 +95,8 @@ interface Storage {
 
     function listSystemVariables();
     function setSystemVariables($variables);
+
+    function storeComment(\models\Comment $comment);
+    function loadComments(\models\WikiPage $page);
+    function loadComment($commentId);
 }
