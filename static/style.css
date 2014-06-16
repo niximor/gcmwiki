@@ -1,1 +1,103 @@
-body { background-color: white; color: black; }
+body { background-color: #E4ECF0; color: black; font-family: verdana, arial, helvetica, sans-serif; font-size: 0.74em; }
+#container { width: 100%; max-width: 80em; margin-left: auto; margin-right: auto; background-color: white; }
+#header { padding: 1em; padding-bottom: 0; border-bottom: solid 0.1em #E0E0E0; }
+#header h1 { font-size: 1.5em; display: inline; margin: 0; padding: 0; }
+#header h1 a { text-decoration: none; color: black; }
+#header h2 { font-weight: normal; display: inline; margin: 0; padding: 0; }
+#header h2:before { content: ": "; display: inline; font-weight: bold; margin-left: -0.2em; }
+#header {  }
+
+#userpanel { float: right; }
+
+#actions { margin-top: 1em; }
+#actions ul { list-style-type: none; margin: 0; padding: 0; }
+#actions ul li { display: inline-block; padding-right: 0.5em; border-right: dotted 0.1em #808080; margin-right: 0.5em; }
+#actions ul li:last-of-type { border-right: none; }
+
+#navigation { padding: 0; border-top: solid 0.1em #E0E0E0; background-color: #E4ECF0; margin: 0.5em -1em; margin-bottom: 0; }
+#navigation ul { list-style-type: none; margin: 0; padding: 0.3em 1em; padding-left: 0.8em; }
+#navigation li { margin: 0; padding: 0; display: inline-block; }
+#navigation li:before { content: "\00A0\00BB\00A0"; }
+
+#footer { border-top: solid 0.1em #E0E0E0; background-color: #E4EcF0; text-align: right; color: #A1BFCF; padding: 0.5em 1em; }
+
+#main { padding: 1em; }
+#main h1 { font-size: 1.6em; border-bottom: solid 0.15em #D5E5F0; margin: 0.5em 0; }
+#main h1:first-of-type { margin-top: 0; }
+#main h2 { font-size: 1.3em; border-bottom: solid 0.1em #D5E5F0; margin: 0.5em 0; }
+
+.ip { color: #808080; }
+
+ul.comments { list-style-type: none; margin: 0; padding: 0; border-right: solid 0.1em #E0E0E0; }
+ul.comments ul.comments { margin-right: -0.1em; margin-left: 2em; }
+.comment { border-top: solid 0.1em #E0E0E0; padding: 0; }
+.comment .header { background-color: #F0F0F0; padding: 0.2em 0.5em; border-left: solid 0.1em #E0E0E0; }
+.comment .body { padding: 0.2em 0.5em; border-left: solid 0.1em #E0E0E0; background-color: #FAFAFA; }
+.comment .footer { border-bottom: solid 0.1em #E0E0E0; margin-bottom: -0.1em; padding: 0.2em 0.5em; text-align: right; border-left: solid 0.1em #E0E0E0; background-color: #FAFAFA; }
+div.comment { border-right: solid 0.1em #E0E0E0; border-bottom: solid 0.1em #E0E0E0; }
+.comments .footer { padding: 0.5em 0.2em; }
+
+input, textarea, select, option { font-family: verdana, arial, helvetica, sans-serif; font-size: 1em; color: black; background-color: white; max-width: 100% !important; }
+input, textarea { border: solid 0.1em #C0C0C0; padding: 0.2em;}
+select { border: solid 0.1em #C0C0C0; }
+input[type=button], input[type=submit], input[type=reset] { background-color: #D0D0D0; padding: 0 1em; }
+input[type=submit] { font-weight: bold; }
+
+form>div { border-top: solid 0.1em #E0E0E0; border-bottom: solid 0.1em #E0E0E0; background-color: #FAFAFA; padding: 0.5em 0.2em; margin-bottom: -0.1em; }
+form>div label:first-of-type { display: inline-block; width: 14em; text-align: right; vertical-align: top; padding-top: 0.3em; }
+form>div.nogrid label:first-of-type { width: auto; }
+form>div input[type=button], form div input[type=submit], form div input[type=reset] { width: auto; }
+form>div.textarea>div { border: solid 0.1em #C0C0C0; }
+form>div.textarea>div textarea { -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; height: 10em; width: 100% !important; border: none; }
+form>div.textarea { padding-left: 0.2em; padding-right: 0.2em; }
+form>div.textarea label { width: auto; display: block; text-align: left; padding-left: 0.5%; padding-right: 0.5%; padding-top: 0; }
+form>div.buttons { text-align: center; }
+form>div.buttons input { padding: 0.2em 1.5em;}
+form>div.buttons input, form div.buttons a { display: inline-block; margin-left: 0.5em; margin-right: 0.5em; }
+form>div.fullwidth>label { float: left; padding-right: 0.5em; }
+form>div.fullwidth>div { overflow: hidden; }
+form>div.fullwidth>div input:first-of-type { width: 100%; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; }
+form>div.fullwidth>div.nofull { margin-left: 0; }
+form>div.fullwidth>div.nofull input:first-of-type { width: auto; }
+form>div label.fullwidth { float: none; display: block; width: auto; text-align: left; padding-bottom: 0.2em; padding-top: 0; }
+label.checkbox input { vertical-align: -0.1em; }
+
+table { border-collapse: collapse; width: 100%; }
+table td, table th { border: solid 0.1em #E0E0E0; padding: 0.2em; }
+table thead th { background-color: #FAFAFA; font-weight: bold; text-align: center; }
+table td, table tbody th { background-color: white; }
+table tbody th[colspan] { border: none; text-align: left; background: none; }
+#main table tbody th h2 { border: none; margin: 0; margin-top: 1em; padding: 0; }
+
+table.nofull { width: auto; }
+table.noborder td, table.noborder th { border: none; background: none; }
+table tr.noborder>td, table tr.noborder>th { border: none; background: none; }
+form>div table.nofull { margin-left: auto; margin-right: auto; }
+
+table .history_revision { width: 3em; }
+table td.history_revision { text-align: right; }
+table td.history_diff { width: 1em; }
+table th.history_diff { width: 4em; }
+table .history_show { text-align: center; width: 5em; }
+table .history_date { width: 12em; }
+table .history_author { width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+table .acl_name { width: 12em; }
+table .acl { text-align: center; width: 5em; }
+
+table .privilege_value { text-align: center; }
+
+.acl_select { width: 10em; }
+
+span.checkbox { display: inline-block; width: 1.2em; height: 1.2em; border-radius: 0.6em; cursor: pointer; vertical-align: middle; }
+span.checkbox.yes { background-color: green; }
+span.checkbox.no { background-color: red; }
+span.checkbox.none { background-color: gray; }
+
+a:link, a:visited, a:active { color: #135FAB; text-decoration: none; }
+a:hover { text-decoration: underline; color: #9C2A11; }
+
+dl dt { font-weight: bold; display: block; float: left; clear: left; width: 12em; padding-top: 1em; }
+dl dd { margin-left: 12em; padding-top: 1em; }
+
+form.editPage>div>div textarea { height: 50em; }

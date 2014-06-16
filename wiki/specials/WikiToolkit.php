@@ -5,6 +5,7 @@ namespace specials;
 require_once "mail/MailMessage.php";
 require_once "specials/SpecialController.php";
 
+
 class WikiToolkit extends SpecialController {
 	public function login() {
 		if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["username"]) && isset($_POST["password"])) {
@@ -19,6 +20,10 @@ class WikiToolkit extends SpecialController {
 
 		$page = new \view\Template("wiki/login.php");
 		$this->template->setChild($page);
+
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Log in", $this->template->getSelf());
+		$this->template->setTitle("Log in");
 	}
 
 	public function logout() {
@@ -44,6 +49,10 @@ class WikiToolkit extends SpecialController {
 
 		$page = new \view\Template("wiki/register.php");
 		$this->template->setChild($page);
+
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Register", $this->template->getSelf());
+		$this->template->setTitle("Register");
 	}
 
 	public function forgot_password() {
@@ -125,6 +134,10 @@ class WikiToolkit extends SpecialController {
 			$child = new \view\Template("wiki/forgot_password.php");
 			$this->template->setChild($child);
 		}
+
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Forgotten password recovery", $this->template->getSelf());
+		$this->template->setTitle("Forgotten password recovery");
 	}
 
 	public function user($name) {
@@ -140,6 +153,10 @@ class WikiToolkit extends SpecialController {
 		}
 
 		$this->template->setChild($child);
+
+		$this->template->addNavigation("User profile", NULL);
+		$this->template->addNavigation($user->getName(), $this->template->getSelf());
+		$this->template->setTitle("User profile: ".$user->getName());
 	}
 
 	public function settings() {
@@ -164,6 +181,10 @@ class WikiToolkit extends SpecialController {
 			$child = new \view\Template("need_login.php");
 			$this->template->setChild($child);
 		}
+
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Settings", $this->template->getSelf());
+		$this->template->setTitle("Settings");
 	}
 
 	public function change_password() {
@@ -198,10 +219,15 @@ class WikiToolkit extends SpecialController {
 	}
 
 	public function user_groups($user) {
+		$this->template->addNavigation("User profile", NULL);
+
 		if (\lib\CurrentUser::hasPriv("admin_user_privileges")) {
 			$be = $this->getBackend();
 			try {
 				$user = $be->loadUserInfo($user, "name");
+				$this->template->addNavigation($user->getName(), "/wiki:user/".$user->getName());
+				$this->template->addNavigation("Groups", $this->template->getSelf());
+				$this->template->setTitle(sprintf("Groups %s is member of", $user->getName()));
 
 				if ($_SERVER["REQUEST_METHOD"] == "POST") {
 					// Add user to group
@@ -270,9 +296,19 @@ class WikiToolkit extends SpecialController {
 		$child = new \view\Template("wiki/groups.php");
 		$child->addVariable("Groups", $be->listGroups(NULL, array("userCount")));
 		$this->template->setChild($child);
+
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Groups", $this->template->getSelf());
+		$this->template->setTitle("Groups");
 	}
 
 	protected function _group_listUsers($be, \models\Group $group) {
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Groups", $this->template->getSelf());
+		$this->template->addNavigation($group->getName(), NULL);
+		$this->template->addNavigation("Users", $this->template->getSelf()."?listUsers=".$group->getId());
+		$this->template->setTitle(sprintf("Users in group %s", $group->getName()));
+
 		if (isset($_REQUEST["remove"])) {
 			$u = new \models\User;
 			$u->setId($_REQUEST["remove"]);
@@ -299,6 +335,12 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _group_modify($be, \models\Group $group) {
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Groups", $this->template->getSelf());
+		$this->template->addNavigation($group->getName(), NULL);
+		$this->template->addNavigation("Modify", $this->template->getSelf()."?modify=".$group->getId());
+		$this->template->setTitle(sprintf("Modify group %s", $group->getName()));
+
 		if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$group->setName($_POST["name"]);
 			$be->storeGroupInfo($group);
@@ -321,6 +363,12 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _group_privileges($be, \models\Group $group) {
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Groups", $this->template->getSelf());
+		$this->template->addNavigation($group->getName(), NULL);
+		$this->template->addNavigation("Privileges", $this->template->getSelf()."?privileges=".$group->getId());
+		$this->template->setTitle(sprintf("Privileges of group %s", $group->getName()));
+
 		if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$set = array();
 
@@ -412,6 +460,11 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _users_privileges($be, \models\User $user) {
+		$this->template->addNavigation("User profile", NULL);
+		$this->template->addNavigation($user->getName(), "/wiki:user/".$user->getName());
+		$this->template->addNavigation("Privileges", $this->template->getSelf()."?privileges=".$user->getId());
+		$this->template->setTitle(sprintf("Privileges of %s", $user->getName()));
+
 		if (\lib\CurrentUser::hasPriv("admin_user_privileges")) {
 			if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				if (isset($_POST["privilege"]) && is_array($_POST["privilege"])) {
@@ -448,6 +501,10 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _users_index($be) {
+		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("Users", $this->template->getSelf());
+		$this->template->setTitle("Users");
+
 		$child = new \view\Template("wiki/users/index.php");
 		$child->addVariable("Users", $be->listUsers(NULL, array("registered", "last_login", "status_id", "logged_in")));
 		$this->template->setChild($child);
@@ -532,16 +589,6 @@ class WikiToolkit extends SpecialController {
 
 				$this->template->setChild($child);
 			}
-		} else {
-			$child = new \view\Template("need_privileges.php");
-			$this->template->setChild($child);
-		}
-	}
-
-	function privileges() {
-		if (\lib\CurrentUser::hasPriv("admin_user_privileges")) {
-			// TODO: Manage system privileges
-			// TODO: Merge with system settings
 		} else {
 			$child = new \view\Template("need_privileges.php");
 			$this->template->setChild($child);

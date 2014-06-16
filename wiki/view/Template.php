@@ -2,6 +2,24 @@
 
 namespace view;
 
+class PageAction {
+	public $url;
+	public $name;
+
+	function __construct($name, $url) {
+		$this->name = $name;
+		$this->url = $url;
+	}
+
+	function __toString() {
+		if (!empty($this->url)) {
+			return sprintf("<a href=\"%s\">%s</a>", htmlspecialchars($this->url), htmlspecialchars($this->name));
+		} else {
+			return htmlspecialchars($this->name);
+		}
+	}
+}
+
 class Template {
 	protected $file;
 
@@ -16,6 +34,9 @@ class Template {
 		$this->file = $file;
 
 		if (!is_null($parent)) $this->parent = $parent;
+
+		$this->variables["Actions"] = array();
+		$this->variables["Navigation"] = array();
 	}
 
 	function setChild(Template $child) {
@@ -25,15 +46,69 @@ class Template {
 
 	function setParent(Template $parent=NULL) {
 		$this->parent = $parent;
+
+		if (isset($this->variables["Title"])) {
+			$this->parent->setTitle($this->variables["Title"]);
+		}
+
+		if (isset($this->variables["Actions"])) {
+			foreach ($this->variables["Actions"] as $Action) {
+				$this->parent->variables["Actions"][] = $Action;
+			}
+			unset($this->variables["Actions"]);
+		}
+
+		if (isset($this->variables["Navigation"])) {
+			foreach ($this->variables["Navigation"] as $Action) {
+				$this->parent->variables["Navigation"][] = $Action;
+			}
+			unset($this->variables["Navigation"]);
+		}
+	}
+
+	function setTitle($title) {
+		if (!is_null($this->parent)) {
+			$this->parent->setTitle($title);
+		} else {
+			$this->variables["Title"] = $title;
+		}
+	}
+
+	function addAction($name, $url) {
+		// Need to bubble to root template.
+		if (!is_null($this->parent)) {
+			$this->parent->addAction($name, $this->url($url));
+		} else {
+			$this->variables["Actions"][] = new PageAction($name, $this->url($url));
+		}
+	}
+
+	function addNavigation($name, $url) {
+		if (!is_null($this->parent)) {
+			$this->parent->addNavigation($name, $this->url($url));
+		} else {
+			$this->variables["Navigation"][] = new PageAction($name, $this->url($url));
+		}
 	}
 
 	function addVariable($key, $val) {
-		$this->variables[$key] = $val;
+		if (!in_array($key, array("Actions", "Key", "Navigation"))) {
+			$this->variables[$key] = $val;
+		} else {
+			throw new \RuntimeException("Cannot set variable ".$key." directly. Use specialized function.");
+		}
 	}
 
 	function render() {
-		if ($this->parent) {
-			extract($this->parent->variables);
+		$parents = array();
+		$parent = $this->parent;
+		while ($parent != NULL) {
+			$parents[] = $parent;
+			$parent = $parent->parent;
+		}
+
+		foreach (array_reverse($parents) as $parent) {
+			extract($parent->variables);
 		}
 
 		extract($this->variables);
@@ -52,8 +127,16 @@ class Template {
 		exit;
 	}
 
-	function url($path) {
+	function url($path, $cut = 0) {
+		if (is_null($path)) return NULL;
+
 		$root = dirname($_SERVER["SCRIPT_NAME"]);
+
+		if ($cut < 0) {
+			$parts = explode("/", $path);
+			$parts = array_splice($parts, 0, $cut);
+			$path = implode("/", $parts);
+		}
 
 		if (!empty($path) && $path[0] == '/') {
 			return $root.$path;

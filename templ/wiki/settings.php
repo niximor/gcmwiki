@@ -15,7 +15,7 @@
         <a href="<?php echo $this->url("/wiki:change_password"); ?>">Change password</a>
     </div>
 
-    <div>
+    <div class="buttons">
         <input type="submit" value="Save" />
     </div>
 </form>

@@ -30,12 +30,12 @@
 
 <h2>Create group</h2>
 <form action="<?php echo $this->url("/wiki:groups?add"); ?>" method="post">
-	<div>
+	<div class="fullwidth nogrid">
 		<label for="name">Group name:</label>
-		<input type="text" name="name" />
+		<div><input type="text" name="name" /></div>
 	</div>
 
-	<div>
+	<div class="buttons">
 		<input type="submit" value="Create" />
 	</div>
 </form>

@@ -12,10 +12,10 @@ class CommentsController extends SpecialController {
 			throw new \view\NotFound();
 		}
 
-		$be = \Config::Get("__Backend");
-		$acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
+		$be = $this->getBackend();
+		$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-		if (!$acl->comment_write) {
+		if (!$this->Acl->comment_write) {
 			throw new \view\AccessDenided();
 		}
 
@@ -72,6 +72,10 @@ class CommentsController extends SpecialController {
 
 		\lib\Session::Set("Form", NULL);
 		\lib\Session::Set("Errors", NULL);
+
+		$this->addPageLinks();
+		$this->template->addNavigation("Add comment", $this->template->getSelf());
+		$this->addPageActions();
 	}
 }
 

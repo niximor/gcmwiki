@@ -11,6 +11,7 @@ require_once "specials/SpecialController.php";
 
 class WikiController extends SpecialController {
 	protected $pageName;
+	protected $Acl;
 
 	function __construct(\view\Template $page, $path) {
 		if (count($path) == 0) {
@@ -26,68 +27,74 @@ class WikiController extends SpecialController {
 			$be = $this->getBackend();
 
 			if (isset($_GET["revision"])) {
-				$wikiPage = $be->loadPage($path, array("body_html"), $_GET["revision"]);
+				$this->relatedPage = $be->loadPage($path, array("body_html"), $_GET["revision"]);
 			} else {
-				$wikiPage = $be->loadPage($path, array("body_html"));
+				$this->relatedPage = $be->loadPage($path, array("body_html"));
 			}
 
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			$comments = $be->loadComments($wikiPage);
+			$comments = $be->loadComments($this->relatedPage);
 			
-			if ($acl->page_read) {
+			if ($this->Acl->page_read) {
 				$child = new \view\Template("page/index.php");
-				$child->addVariable("Page", $wikiPage);
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Page", $this->relatedPage);
+				$child->addVariable("Acl", $this->Acl);
 				$child->addVariable("Comments", $comments);
+				$child->setTitle($this->relatedPage->getName());
 
 				$this->template->setChild($child);
 			} else {
 				$child = new \view\Template("page/no_access_read.php");
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Acl", $this->Acl);
 
 				$this->template->setChild($child);
 			}
 		} catch (\storage\PageNotFoundException $e) {
 			$child = new \view\Template("page/notfound.php");
 			$child->addVariable("PageName", $e->getMessage());
+			$child->setTitle($e->getMessage());
 
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
-				$acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
+				$this->Acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
 			} else {
-				$acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
+				$this->Acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
 			}
 
 			$child->addVariable("Parent", $e->getParentPage());
-			$child->addVariable("Acl", $acl);
+			$child->addVariable("Acl", $this->Acl);
 
 			$this->template->setChild($child);
 		}
+
+		$this->addPageActions();
+		$this->addPageLinks();
 	}
 
 	function edit($path) {
 		$be = $this->getBackend();
 
 		try {
-			$wikiPage = $be->loadPage($path, array("body_wiki"));
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path, array("body_wiki"));
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 		} catch (\storage\PageNotFoundException $e) {
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
-				$acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
+				$this->Acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
 			} else {
-				$acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
+				$this->Acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
 			}
 
-			$wikiPage = new \models\WikiPage();
-			$wikiPage->setUrl($e->getMessage());
-			$wikiPage->setName($e->getMessage());
+			$this->relatedPage = new \models\WikiPage();
+			$this->relatedPage->setUrl($e->getMessage());
+			$this->relatedPage->setName($e->getMessage());
+			$this->relatedPage->setParent($parent);
 		}
 
-		if ($acl->page_write) {
+		if ($this->Acl->page_write) {
 			$child = new \view\Template("page/edit.php");
-			$child->addVariable("Page", $wikiPage);
+			$child->addVariable("Page", $this->relatedPage);
 			$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
 			$child->addVariable("Form", (array)\lib\Session::Get("Form"));
 
@@ -97,47 +104,52 @@ class WikiController extends SpecialController {
 			$this->template->setChild($child);
 		} else {
 			$child = new \view\Template("page/no_access_write.php");
-			$child->addVariable("Page", $wikiPage);
-			$child->addVariable("Acl", $acl);
+			$child->addVariable("Page", $this->relatedPage);
+			$child->addVariable("Acl", $this->Acl);
 
 			$this->template->setChild($child);
 		}
+
+		$this->addPageActions();
+		$this->addPageLinks();
+		$this->template->addNavigation("Edit", $this->template->getSelf()."?edit");
 	}
 
 	function save($path) {
 		$be = $this->getBackend();
 
 		try {
-			$wikiPage = $be->loadPage($path);
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path);
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 		} catch (\storage\PageNotFoundException $e) {
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
-				$acl = $be->loadPageAcl($e->getParentPage(), \lib\CurrentUser::i());
+				$this->Acl = $be->loadPageAcl($e->getParentPage(), \lib\CurrentUser::i());
 			} else {
-				$acl = $be->loadDefaultAcl();
+				$this->Acl = $be->loadDefaultAcl();
 			}
 
-			$wikiPage = new \models\WikiPage();
-			$wikiPage->setUrl($e->getMessage());
-			$wikiPage->setName($e->getMessage());
+			$this->relatedPage = new \models\WikiPage();
+			$this->relatedPage->setUrl($e->getMessage());
+			$this->relatedPage->setName($e->getMessage());
+			$this->relatedPage->setParent($parent);
 		}
 
-		if (!$acl->page_write) {
+		if (!$this->Acl->page_write) {
 			$this->template->redirect($this->template->getSelf()."?edit");
 			return;
 		}
 
 		if (isset($_POST["body"])) {
-			$wikiPage->updateBody($_POST["body"]);
-			$wikiPage->setName($_POST["name"]);
+			$this->relatedPage->updateBody($_POST["body"]);
+			$this->relatedPage->setName($_POST["name"]);
 
-			$wikiPage->setSmall_change((isset($_POST["small_change"]))?true:false);
-			$wikiPage->setSummary($_POST["summary"]);
+			$this->relatedPage->setSmall_change((isset($_POST["small_change"]))?true:false);
+			$this->relatedPage->setSummary($_POST["summary"]);
 		}
 
 		try {
-			$be->storePage($wikiPage);
+			$be->storePage($this->relatedPage);
 			$this->template->redirect($this->template->getSelf());
 		} catch (\storage\Diagnostics $e) {
 			\lib\Session::Set("Errors", $e->getErrorsForFields(), false);
@@ -150,21 +162,22 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$wikiPage = $be->loadPage($path);
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path);
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			if ($acl->page_read) {
-				$summary = $be->getHistorySummary($wikiPage->getId());
+			if ($this->Acl->page_read) {
+				$summary = $be->getHistorySummary($this->relatedPage->getId());
 
 				$child = new \view\Template("page/history.php");
 
 				$child->addVariable("History", $summary);
-				$child->addVariable("Page", $wikiPage);
+				$child->addVariable("Page", $this->relatedPage);
+				$child->addVariable("Acl", $this->Acl);
 
 				$this->template->setChild($child);
 			} else {
 				$child = new \view\Template("page/no_access_read.php");
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Acl", $this->Acl);
 
 				$this->template->setChild($child);
 			}
@@ -174,16 +187,20 @@ class WikiController extends SpecialController {
 
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
-				$acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
+				$this->Acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
 			} else {
-				$acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
+				$this->Acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
 			}
 
 			$child->addVariable("Parent", $e->getParentPage());
-			$child->addVariable("Acl", $acl);
+			$child->addVariable("Acl", $this->Acl);
 
 			$this->template->setChild($child);
 		}
+
+		$this->addPageActions();
+		$this->addPageLinks();
+		$this->template->addNavigation("History", $this->template->getSelf()."?history");
 	}
 
 	function diff($path) {
@@ -201,19 +218,19 @@ class WikiController extends SpecialController {
 
 		try {
 			// Load revisions from DB
-			$wikiPage = $be->loadPage($path, array("body_wiki", "revision"));
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path, array("body_wiki", "revision"));
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			if ($acl->page_read) {
-				if ($wikiPage->getRevision() != $rev1) {
+			if ($this->Acl->page_read) {
+				if ($this->relatedPage->getRevision() != $rev1) {
 					$rev1 = $be->loadPage($path, array("body_wiki", "revision"), $rev1);
 				} else {
-					$rev1 = $wikiPage;
+					$rev1 = $this->relatedPage;
 				}
-				if ($wikiPage->getRevision() != $rev2) {
+				if ($this->relatedPage->getRevision() != $rev2) {
 					$rev2 = $be->loadPage($path, array("body_wiki", "revision"), $rev2);
 				} else {
-					$rev2 = $wikiPage;
+					$rev2 = $this->relatedPage;
 				}
 
 				$child = new \view\Template("page/diff.php");
@@ -221,7 +238,7 @@ class WikiController extends SpecialController {
 				$diff = new \lib\Diff();
 				$computed = $diff->compute($rev2->body_wiki, $rev1->body_wiki);
 
-				$child->addVariable("Page", $wikiPage);
+				$child->addVariable("Page", $this->relatedPage);
 				$child->addVariable("Revision1", $rev1);
 				$child->addVariable("Revision2", $rev2);
 				$child->addVariable("Diff", $computed);
@@ -229,7 +246,7 @@ class WikiController extends SpecialController {
 				$this->template->setChild($child);
 			} else {
 				$child = new \view\Template("page/no_access_read.php");
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Acl", $this->Acl);
 
 				$this->template->setChild($child);
 			}
@@ -239,38 +256,41 @@ class WikiController extends SpecialController {
 
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
-				$acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
+				$this->Acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
 			} else {
-				$acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
+				$this->Acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
 			}
 
 			$child->addVariable("Parent", $e->getParentPage());
-			$child->addVariable("Acl", $acl);
+			$child->addVariable("Acl", $this->Acl);
 
 			$this->template->setChild($child);
 		}
+
+		$this->addPageLinks();
+		$this->addPageActions();
 	}
 
 	function acl($path) {
 		$be = $this->getBackend();
 
 		try {
-			$wikiPage = $be->loadPage($path);
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path);
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			if ($acl->page_admin) {
+			if ($this->Acl->page_admin) {
 				$child = new \view\Template("page/acl.php");
-				$child->addVariable("Page", $wikiPage);
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Page", $this->relatedPage);
+				$child->addVariable("Acl", $this->Acl);
 
-				$child->addVariable("PageAcls", $be->listPageAcl($wikiPage));
+				$child->addVariable("PageAcls", $be->listPageAcl($this->relatedPage));
 				$child->addVariable("Users", $be->listUsers());
 				$child->addVariable("Groups", $be->listGroups());
 
 				$this->template->setChild($child);
 			} else {
 				$child = new \view\Template("page/no_access_admin.php");
-				$child->addVariable("Acl", $acl);
+				$child->addVariable("Acl", $this->Acl);
 
 				$this->template->setChild($child);
 			}
@@ -286,20 +306,24 @@ class WikiController extends SpecialController {
 			}
 
 			$child->addVariable("Parent", $e->getParentPage());
-			$child->addVariable("Acl", $acl);
+			$child->addVariable("Acl", $this->Acl);
 
 			$this->template->setChild($child);
 		}
+
+		$this->addPageLinks();
+		$this->addPageActions();
+		$this->template->addNavigation("ACLs", $this->template->getSelf()."?acl");
 	}
 
 	function saveAcl($path) {
 		$be = $this->getBackend();
 
 		try {
-			$wikiPage = $be->loadPage($path);
-			$acl = $be->loadPageAcl($wikiPage, \lib\CurrentUser::i());
+			$this->relatedPage = $be->loadPage($path);
+			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			if ($acl->page_admin) {
+			if ($this->Acl->page_admin) {
 				$set = new \models\WikiAclSet();
 
 				$toVal = function($val) {
@@ -346,7 +370,7 @@ class WikiController extends SpecialController {
 					}
 				}
 
-				$be->storePageAcl($wikiPage, $set);
+				$be->storePageAcl($this->relatedPage, $set);
 				$this->template->redirect($this->template->getSelf()."?acl");
 			} else {
 				$this->template->redirect($this->template->getSelf()."?acl");

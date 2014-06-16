@@ -108,9 +108,9 @@ class FakeUser extends User {
 
     function profileLink(\view\Template $template) {
         if (!is_null($this->name)) {
-            return sprintf("%s (%s)", htmlspecialchars($this->getName()), $this->getIp());
+            return sprintf("%s <span class=\"ip\">(%s)</span>", htmlspecialchars($this->getName()), $this->getIp());
         } else {
-            return htmlspecialchars($this->getIp());
+            return "<span class=\"ip\">".htmlspecialchars($this->getIp())."</span>";
         }
     }
 }

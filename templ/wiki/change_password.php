@@ -16,7 +16,7 @@
         <input type="password" name="password2" />
     </div>
 
-    <div>
+    <div class="buttons">
         <input type="submit" value="Change password" />
     </div>
 </form>

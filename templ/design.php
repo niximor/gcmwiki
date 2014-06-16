@@ -2,15 +2,61 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title><?php echo Config::Get("Title", "GCM::Wiki"); ?></title>
+		<title><?php
+			if (isset($Title)) {
+				printf("%s: %s", Config::Get("Title", "GCM::Wiki"), $Title);
+			} else {
+				echo Config::Get("Title", "GCM::Wiki");
+			}
+		?></title>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 		<link rel="stylesheet" type="text/css" href="<?php echo $this->url("/static/style.css"); ?>" />
+		<script type="text/javascript" src="<?php echo $this->url("/static/wiki.js"); ?>"></script>
 	</head>
 
 	<body>
-		<h1><?php echo "<a href=\"".$this->url("/".Config::Get("DefaultPage"))."\">".Config::Get("Title", "GCM::Wiki")."</a>"; ?></h1>
+		<div id="container">
+			<div id="header">
+				<h1><?php echo "<a href=\"".$this->url("/".Config::Get("DefaultPage"))."\">".Config::Get("Title", "GCM::Wiki")."</a>"; ?></h1>
+<?php
+	if (isset($Title)) { echo "<h2>".$Title."</h2>"; }
+?>
+				<div id="userpanel">
+					<?php if (!$CurrentUser) { ?>
+					<a href="<?php echo $this->url("/wiki:login"); ?>">Log in</a> |
+					<a href="<?php echo $this->url("/wiki:register"); ?>">Register</a>
+					<?php } else { echo "You are ".$CurrentUser->profileLink($this); ?>
+					(<a href="<?php echo $this->url("/wiki:settings"); ?>">Settings</a> |
+					<a href="<?php echo $this->url("/wiki:logout"); ?>">Log out</a>)
+					<?php } ?>
+				</div>
 
-		<div id="main">
+				<div id="actions">
+<?php
+	if (isset($Actions) && !empty($Actions)) {
+		echo "<ul>";
+		foreach ($Actions as $Action) {
+			echo "<li>".$Action."</li>";
+		}
+		echo "</ul>";
+	}
+?>
+				</div>
+
+				<div id="navigation">
+<?php
+	if (isset($Navigation) && !empty($Navigation)) {
+		echo "<ul>";
+		foreach ($Navigation as $Action) {
+			echo "<li>".$Action."</li>";
+		}
+		echo "</ul>";
+	}
+?>
+				</div>
+			</div>
+
+			<div id="main">
 <?php
 	foreach ($Messages as $msg) {
 		switch ($msg->type) {
@@ -33,17 +79,12 @@
 	}
 ?>
 
-			<?php if ($this->child) $this->child->render(); ?>
-		</div>
+				<?php if ($this->child) $this->child->render(); ?>
+			</div>
 
-		<div id="footer">
-			<?php if (!$CurrentUser) { ?>
-			[<a href="<?php echo $this->url("/wiki:login"); ?>">Log in</a>]
-			[<a href="<?php echo $this->url("/wiki:register"); ?>">Register</a>]
-			<?php } else { echo "<a href=\"".$this->url("/wiki:user/".$CurrentUser->getName())."\">".$CurrentUser->getName()."</a>"; ?>
-			[<a href="<?php echo $this->url("/wiki:settings"); ?>">Settings</a>]
-			[<a href="<?php echo $this->url("/wiki:logout"); ?>">Log out</a>]
-			<?php } ?> :: Running on GCM::Wiki
+			<div id="footer">
+				 Running on GCM::Wiki
+			</div>
 		</div>
 	</body>
 </html>

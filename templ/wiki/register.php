@@ -1,3 +1,5 @@
+<h1>Register</h1>
+
 <form action="<?php echo $this->url("/wiki:register"); ?>" method="post">
     <div>
         <label for="username">User name:</label>
@@ -14,7 +16,7 @@
         <input type="text" name="email" />
     </div>
 
-    <div>
+    <div class="buttons">
         <input type="submit" value="Register" />
     </div>
 </form>
