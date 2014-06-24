@@ -36,6 +36,12 @@ class Context {
     public function replaceSpecials($line) {
         return htmlspecialchars($line);
     }
+    
+    public function formatLines(Context &$ctx, $lines) {
+        foreach ($lines as $line) {
+            $ctx->formatLine($ctx, $line);
+        }
+    }
 
     public function formatLine(Context &$ctx, $line) {
         if (!is_null($trigger = $ctx->getTrigger())) {

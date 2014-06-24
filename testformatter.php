@@ -8,6 +8,7 @@ require_once "lib/format/Line.php";
 require_once "lib/format/Lists.php";
 require_once "lib/format/Line.php";
 require_once "lib/format/Heading.php";
+require_once "lib/format/Table.php";
 
 require_once "lib/format/BasicFormat.php";
 require_once "lib/format/Link.php";
@@ -24,6 +25,7 @@ WikiFormatter::installLineTrigger(format\Heading::Create(5));
 WikiFormatter::installLineTrigger(format\Heading::Create(6));
 WikiFormatter::installLineTrigger(new format\Line());
 WikiFormatter::installLineTrigger(new format\Lists());
+WikiFormatter::installLineTrigger(new format\Table());
 
 WikiFormatter::installInlineTrigger(format\BasicFormat::Create("**", "strong"));
 WikiFormatter::installInlineTrigger(format\BasicFormat::Create("//", "em"));
