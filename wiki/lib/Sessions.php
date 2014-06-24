@@ -47,7 +47,7 @@ class CookieIdSource implements SessionIdSource {
                     $this->cookieName,
                     $id,
                     time() + 365 * 86400,
-                    ROOT_PATH,
+                    dirname($_SERVER["SCRIPT_NAME"]),
                     ".".$_SERVER["HTTP_HOST"]
                 );
                 $this->cookieSet = true;

@@ -49,7 +49,7 @@ class MySQL implements Storage {
             throw new Exception("Parameter requiredColumns must be array.");
         }
 
-        $prent = NULL;
+        $parent = NULL;
 
         $part_len = count($path);
         for ($i = 0; $i < $part_len; ++$i) {
