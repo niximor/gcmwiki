@@ -34,21 +34,44 @@ class Link extends InlineTrigger {
             $url = $text = $matches[1];
         }
 
+        $generated = false;
         if (!preg_match('/[a-zA-Z][a-zA-Z0-9]:\/\//', $url)) {
-            // TODO: Test if this is inter page, if so, generate internal link. Otherwise,
-            // add http as default protocol to the URL.
-            $url = "http://".$url;
+            $be = \Config::Get("__Backend");
+            try {
+                $page = $be->loadPage(preg_split('|/|', $url));
+
+                $ctx->generateHTML(sprintf('<a href="%s" class="page">', htmlspecialchars($url)));
+
+                if ($text != $url) {
+                    $ctx->inlineFormat($text);
+                } else {
+                    $ctx->inlineFormat($page->getName());
+                }
+
+                $ctx->generateHTML('</a>');
+                $generated = true;
+            } catch (\storage\PageNotFoundException $e) {
+                if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
+                    $url = "http://".$url;
+                } else {
+                    $ctx->generateHTML(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($url)));
+                    $ctx->inlineFormat($text);
+                    $ctx->generateHTML('</a>');
+                    $generated = true;
+                }
+            }
         }
 
-        $ctx->generateHTML(sprintf('<a href="%s" class="external">', htmlspecialchars($url)));
-        $ctx->inlineFormat($text);
-        $ctx->generateHTML('</a>');
+        if (!$generated) {
+            $ctx->generateHTML(sprintf('<a href="%s" class="external">', htmlspecialchars($url)));
+            $ctx->inlineFormat($text);
+            $ctx->generateHTML('</a>');
+        }
     }
 
     static function testSuite() {
         self::testFormat("Link na www.google.com a http://www.google.com, stejne tak taky [[www.google.com]] a nebo [[http://www.google.com]] a taky [[www.google.com|s popiskem]].",
             'Link na <a href="http://www.google.com" class="external">www.google.com</a> a <a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky <a href="http://www.google.com" class="external"><a href="http://www.google.com" class="external">www.google.com</a></a> a nebo <a href="http://www.google.com" class="external"><a href="http://www.google.com" class="external">www.google.com</a></a> a taky <a href="http://www.google.com" class="external">s popiskem</a>.');
-        
     }
 }
 
