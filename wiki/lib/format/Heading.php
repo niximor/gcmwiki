@@ -15,7 +15,7 @@ class Heading extends LineTrigger {
         return $h;
     }
 
-    function getRegExp() { return $this->startRe; }
+    function getRegExp(Context $ctx) { return $this->startRe; }
     function callLine(Context $context, $line, $matches) {
         $context->generateHTML(sprintf("<%s>", $this->tagName));
         $context->inlineFormat($matches[1]);

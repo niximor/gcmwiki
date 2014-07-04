@@ -32,14 +32,28 @@ class Context {
     public function generate($text) {
         $this->getFormatter()->generate($text);
     }
+    
+    public function generateHTMLInline($html) {
+        $this->getFormatter()->generateHTMLInline($html);
+    }
 
     public function replaceSpecials($line) {
-        return htmlspecialchars($line);
+        return htmlspecialchars(preg_replace('/\s+/', ' ', $line));
     }
     
     public function formatLines(Context &$ctx, $lines) {
         foreach ($lines as $line) {
+            printf("Render line '%s' with context %s\n", $line, get_class($ctx));
             $ctx->formatLine($ctx, $line);
+            printf("Resulting context is %s\n", get_class($ctx));
+        }
+        
+        while ($ctx && $ctx != $this) {
+            if ($ctx->getTrigger()) {
+                printf("Closing context %s\n", get_class($ctx));
+                $ctx->getTrigger()->callEnd($ctx);
+            }
+            $ctx = $ctx->getParent();
         }
     }
 
@@ -53,7 +67,7 @@ class Context {
         }
 
         foreach (\lib\formatter\WikiFormatter::$lineTriggers as $trigger) {
-            if (preg_match($trigger->getRegExp(), $line, $matches)) {
+            if (preg_match($trigger->getRegExp($ctx), $line, $matches)) {
                 if ($ctx->getTrigger() != $trigger) {
                     $ctx = $trigger->getContext($ctx, $line, $matches);
                 }
@@ -70,7 +84,7 @@ class Context {
         $lowest = NULL;
         $lowestIndex = 0;
         foreach (\lib\formatter\WikiFormatter::$inlineTriggers as $trigger) {
-            if (preg_match($trigger->getRegExp(), $text, $matches, PREG_OFFSET_CAPTURE)) {
+            if (preg_match($trigger->getRegExp($this), $text, $matches, PREG_OFFSET_CAPTURE)) {
                 if (is_null($lowest) || $lowestIndex > $matches[0][1]) {
                     $lowest = $trigger;
                     $lowestIndex = $matches[0][1];
@@ -79,7 +93,7 @@ class Context {
         }
 
         if (!is_null($lowest)) {
-            preg_match($lowest->getRegExp(), $text, $matches, PREG_OFFSET_CAPTURE);
+            preg_match($lowest->getRegExp($this), $text, $matches, PREG_OFFSET_CAPTURE);
             $this->generate($this->replaceSpecials(substr($text, 0, $matches[0][1])));
 
             $matchToCall = array();

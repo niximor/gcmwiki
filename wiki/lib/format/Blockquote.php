@@ -9,7 +9,7 @@ class BlockquoteContext extends Context {
 }
 
 class Blockquote extends LineTrigger {
-    function getRegExp() {
+    function getRegExp(Context $ctx) {
         return "/^(>+) (.*)$/";
     }
 

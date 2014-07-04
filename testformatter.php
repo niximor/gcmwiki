@@ -37,10 +37,6 @@ WikiFormatter::installInlineTrigger(format\BasicFormat::Create("''", "code"));
 WikiFormatter::installInlineTrigger(new format\Link());
 WikiFormatter::installInlineTrigger(new format\LinkInText());
 
-format\Lists::testSuite();
-format\BasicFormat::testSuite();
-format\Link::testSuite();
-
 ?>
 
 <!DOCTYPE html>
@@ -62,6 +58,11 @@ if (!isset($_REQUEST["wiki_text"])) {
 
 echo "Debug:";
 echo "<pre>";
+
+format\Lists::testSuite();
+format\BasicFormat::testSuite();
+format\Link::testSuite();
+
 $f = new WikiFormatter();
 $f->debug = true;
 $out = $f->format($_REQUEST["wiki_text"]);

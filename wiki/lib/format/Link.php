@@ -3,7 +3,7 @@
 namespace lib\formatter\format;
 
 class LinkInText extends InlineTrigger {
-    function getRegExp() {
+    function getRegExp(Context $ctx) {
         return '/(((http|https|ftp):\/\/([a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)*))|(www\.([a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)*)))/';
     }
 
@@ -16,12 +16,12 @@ class LinkInText extends InlineTrigger {
         $text = $matches[0];
         if (!empty($matches[3])) $text = $matches[4];
 
-        $ctx->generateHTML(sprintf('<a href="%s" class="external">%s</a>', htmlspecialchars($url), htmlspecialchars($text)));
+        $ctx->generateHTMLInline(sprintf('<a href="%s" class="external">%s</a>', htmlspecialchars($url), htmlspecialchars($text)));
     }
 }
 
 class Link extends InlineTrigger {
-    function getRegExp() {
+    function getRegExp(Context $ctx) {
         return '/\[\[(.*?)\]\]/';
     }
 
@@ -40,7 +40,7 @@ class Link extends InlineTrigger {
             try {
                 $page = $be->loadPage(preg_split('|/|', $url));
 
-                $ctx->generateHTML(sprintf('<a href="%s" class="page">', htmlspecialchars($url)));
+                $ctx->generateHTMLInline(sprintf('<a href="%s" class="page">', htmlspecialchars($url)));
 
                 if ($text != $url) {
                     $ctx->inlineFormat($text);
@@ -54,18 +54,18 @@ class Link extends InlineTrigger {
                 if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
                     $url = "http://".$url;
                 } else {
-                    $ctx->generateHTML(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($url)));
+                    $ctx->generateHTMLInline(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($url)));
                     $ctx->inlineFormat($text);
-                    $ctx->generateHTML('</a>');
+                    $ctx->generateHTMLInline('</a>');
                     $generated = true;
                 }
             }
         }
 
         if (!$generated) {
-            $ctx->generateHTML(sprintf('<a href="%s" class="external">', htmlspecialchars($url)));
+            $ctx->generateHTMLInline(sprintf('<a href="%s" class="external">', htmlspecialchars($url)));
             $ctx->inlineFormat($text);
-            $ctx->generateHTML('</a>');
+            $ctx->generateHTMLInline('</a>');
         }
     }
 

@@ -33,11 +33,11 @@ class TableColumn {
 }
 
 class Table extends LineTrigger {
-	function getRegExp() {
+	function getRegExp(Context $ctx) {
 	    return '/^\|\|(.*)\|\|$|^\|\|(-+)$/';
     }
     
-    function getEndRegExp() {
+    function getEndRegExp(Context $ctx) {
         return '/^(?!\|\|((.*\|\|)|(-+))).*$/';
     }
     
@@ -165,6 +165,57 @@ class Table extends LineTrigger {
         }
         
         $context->generateHTML("</table>\n");
+    }
+    
+    static function testSuite() {
+        self::testFormat(
+<<<EOF
+||^column 1^||^column 2^||^column 3^||
+||-
+||>1||2||<3||
+||-
+||multi line column||x ||y ||
+||continues on multiple lines|| || ||
+||* and contains list|| || ||
+||* with multiple items|| || ||
+|| * and levels|| || ||
+||* and first level again|| || ||
+||and something that is not a list.|| || ||
+EOF
+,
+<<<EOF
+<table>
+	<thead>
+		<tr>
+			<th>column 1</th>
+			<th>column 2</th>
+			<th>column 3</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td style="text-align: right;">1</td>
+			<td style="text-align: center;">2</td>
+			<td>3</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">multi line column continues on multiple lines<ul>
+	<li>and contains list</li>
+	<li>with multiple items
+		<ul>
+			<li>and levels</li>
+		</ul>
+	</li>
+	<li>and first level again</li>
+</ul>
+and something that is not a list.</td>
+			<td style="text-align: center;">x</td>
+			<td style="text-align: center;">y</td>
+		</tr>
+	</tbody>
+</table>
+EOF
+);
     }
 }
 

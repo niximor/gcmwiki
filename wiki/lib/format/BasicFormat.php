@@ -17,14 +17,14 @@ class ExtendedFormat extends InlineTrigger {
         $this->endHTML = $endHTML;
     }
 
-    function getRegExp() {
+    function getRegExp(Context $ctx) {
         return sprintf('/%s(.*?)%s/', preg_quote($this->startSeq, '/'), preg_quote($this->endSeq, '/'));
     }
 
     function callback(Context $ctx, $matches) {
-        $ctx->generateHTML($this->startHTML);
+        $ctx->generateHTMLInline($this->startHTML);
         $ctx->inlineFormat($matches[1]);
-        $ctx->generateHTML($this->endHTML);
+        $ctx->generateHTMLInline($this->endHTML);
     }
 }
 

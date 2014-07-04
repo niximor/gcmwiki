@@ -45,8 +45,18 @@ class WikiFormatter {
     }
 
     public function generateHTML($string) {
+        if (empty($string)) return;
+        
         $this->output[] = $string;
-        $this->log("Generate ".$string);
+        $this->log("Generate block '%s'", trim($string));
+        $this->space = true;
+    }
+    
+    public function generateHTMLInline($string) {
+        if (empty($string)) return;
+    	
+        $this->output[] = $string;
+        $this->log("Generate inline '%s'", $string);
         $this->space = true;
     }
 
@@ -54,12 +64,17 @@ class WikiFormatter {
     	if (empty($string)) return;
 
     	if ($this->space) {
-    		$this->space = false;
+            //$string = ltrim($string);
     	} else {
-    		$this->output[] = " ";
+            if (!\ctype_space(substr($string, 0, 1))) {
+                $this->output[] = " ";
+            }
     	}
+
     	$this->output[] = $string;
-    	$this->log("Generate %s", $string);
+    	$this->log("Generate string '%s'", $string);
+
+        $this->space = \ctype_space(substr($string, -1));
     }
 }
 
