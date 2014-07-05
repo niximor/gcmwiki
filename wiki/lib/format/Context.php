@@ -43,14 +43,11 @@ class Context {
     
     public function formatLines(Context &$ctx, $lines) {
         foreach ($lines as $line) {
-            printf("Render line '%s' with context %s\n", $line, get_class($ctx));
             $ctx->formatLine($ctx, $line);
-            printf("Resulting context is %s\n", get_class($ctx));
         }
         
         while ($ctx && $ctx != $this) {
             if ($ctx->getTrigger()) {
-                printf("Closing context %s\n", get_class($ctx));
                 $ctx->getTrigger()->callEnd($ctx);
             }
             $ctx = $ctx->getParent();
@@ -68,16 +65,22 @@ class Context {
 
         foreach (\lib\formatter\WikiFormatter::$lineTriggers as $trigger) {
             if (preg_match($trigger->getRegExp($ctx), $line, $matches)) {
+                $oldctx = NULL;
+                
                 if ($ctx->getTrigger() != $trigger) {
+                    $oldctx = $ctx;
                     $ctx = $trigger->getContext($ctx, $line, $matches);
                 }
 
-                $trigger->callLine($ctx, $line, $matches);
-                return;
+                if ($oldctx != $ctx) {
+                    $trigger->callLine($ctx, $line, $matches);
+                    return;
+                }
             }
         }
 
-        $ctx->inlineFormat($line);
+        $ctx->generate(" ");
+        $ctx->inlineFormat($line);        
     }
 
     public function inlineFormat($text) {

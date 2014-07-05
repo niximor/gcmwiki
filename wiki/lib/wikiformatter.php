@@ -57,24 +57,21 @@ class WikiFormatter {
     	
         $this->output[] = $string;
         $this->log("Generate inline '%s'", $string);
-        $this->space = true;
+        //$this->space = true;
     }
 
     public function generate($string) {
     	if (empty($string)) return;
 
-    	if ($this->space) {
-            //$string = ltrim($string);
-    	} else {
-            if (!\ctype_space(substr($string, 0, 1))) {
-                $this->output[] = " ";
-            }
+    	if ($this->space && \ctype_space(substr($string, 0, 1))) {
+            $string = ltrim($string);
     	}
-
-    	$this->output[] = $string;
-    	$this->log("Generate string '%s'", $string);
-
-        $this->space = \ctype_space(substr($string, -1));
+    	
+    	if (!empty($string)) {
+        	$this->output[] = $string;
+    	    $this->log("Generate string '%s'", $string);
+    	    $this->space = \ctype_space(substr($string, -1));
+    	}
     }
 }
 
