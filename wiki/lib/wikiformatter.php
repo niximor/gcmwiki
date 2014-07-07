@@ -31,13 +31,17 @@ class WikiFormatter {
         $this->output = array();
 
         $lines = explode("\n", $text);
-        $ctx = new format\RootContext($this);
+        $ctx = $root = new format\RootContext($this);
         foreach ($lines as $line) {
-            $ctx->formatLine($ctx, preg_replace('/\r$/', '', $line));
+            $line = preg_replace('/\r$/', '', $line);
+            $ctx->formatLine($ctx, $line);
         }
 
-        while ($ctx->getTrigger()) {
-            $ctx->getTrigger()->callEnd($ctx);
+        while ($ctx != $root) {
+            if ($ctx->getTrigger()) {
+                $ctx->getTrigger()->callEnd($ctx);
+            }
+            $ctx->close();
             $ctx = $ctx->getParent();
         }
 

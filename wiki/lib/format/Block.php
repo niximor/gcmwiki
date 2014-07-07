@@ -4,6 +4,16 @@ namespace lib\formatter\format;
 
 require_once "lib/format/Trigger.php";
 
+class PlainText extends InlineTrigger {
+    function getRegExp(Context $ctx) {
+        return '/{{{(.*?)}}}/';
+    }
+    
+    function callback(Context $ctx, $matches) {
+        $ctx->generate(htmlspecialchars($matches[1]));
+    }
+}
+
 class BlockContext extends Context {
     public $firstline = "";
     public $lines = array();
@@ -13,15 +23,16 @@ class BlockContext extends Context {
 
 class Block extends LineTrigger {
     protected static $blocks = array();
+    
     public static function registerBlockFormatter($name, $callback) {
         if (!isset(self::$blocks[$name])) {
             if (is_callable($callback)) {
                 self::$blocks[$name] = $callback;
             } else {
-                throw \RuntimeException("Second parameter of Block::registerBlockFormatter must be valid callback.");
+                throw new \RuntimeException("Second parameter of Block::registerBlockFormatter must be valid callback.");
             }
         } else {
-            throw \RuntimeException("Block formatter with name `".$name."' already exists.");
+            throw new \RuntimeException("Block formatter with name `".$name."' already exists.");
         }
     }
 
@@ -38,17 +49,9 @@ class Block extends LineTrigger {
     }
     
     function getContext(Context $parent, $line, $matches) {
-        if (isset($matches[2]) && $matches[2] == '}}}') {
-            // It is one-liner, so no first line, just plain formatting.
-            $parent->generate(htmlspecialchars($matches[1]));
-            $parent->formatInline($matches[3]);
-            return $parent;
-        } else {
-            // Multi line
-            $ctx = new BlockContext($parent, $this);
-            $ctx->firstline = $matches[1];
-            return $ctx;
-        }
+        $ctx = new BlockContext($parent, $this);
+        $ctx->firstline = $matches[1];
+        return $ctx;
     }
     
     function callLine(Context $ctx, $line, $matches) {
@@ -69,7 +72,8 @@ class Block extends LineTrigger {
         } else {
             $params = preg_split('/:/', $ctx->firstline, 1);
             if (isset(self::$blocks[$params[0]])) {
-                self::$block[$params[0]]($ctx->lines, $params);
+                $cb = self::$blocks[$params[0]];
+                $cb($ctx, $params);
             } else {
                 $ctx->generateHTML("\n<pre>");
                 $ctx->lines = array_merge(array($ctx->firstline), $ctx->lines);
@@ -80,8 +84,7 @@ class Block extends LineTrigger {
     }
     
     static function testSuite() {
-        self::testFormat(<<<EOF
-{{{
+        self::testFormat("{{{
 this is raw escaped block
 }}}
 aaa {{{preformatted text that **does** not get wiki formatted}}} bbb
@@ -90,25 +93,14 @@ after must get formatted too.
 
 {{{code:c++
 some c++ code
-}}}
-EOF
-,
-<<<EOF
+}}}",
+"
 <pre>this is raw escaped block</pre>
 aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa after must get formatted too. 
 <pre>code:c++
 some c++ code</pre>
-EOF
+"
 );
     }
 }
 
-class PlainText extends InlineTrigger {
-    function getRegExp(Context $ctx) {
-        return '/{{{(.*?)}}}/';
-    }
-    
-    function callback(Context $ctx, $matches) {
-        $ctx->generate(htmlspecialchars($matches[1]));
-    }
-}

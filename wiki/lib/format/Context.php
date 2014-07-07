@@ -7,14 +7,25 @@ require_once "lib/format/Trigger.php";
 class Context {
     protected $parent;
     protected $trigger;
+    protected $root;
+    private $_closed = false;
 
     public function __construct(Context $parent, LineTrigger $trigger = NULL) {
         $this->parent = $parent;
         $this->trigger = $trigger;
+        $this->root = $parent->getRoot();
     }
 
     public function getParent() {
         return $this->parent;
+    }
+
+    function setParent(Context $parent) {
+        $this->parent = $parent;
+    }
+    
+    public function getRoot() {
+        return $this->root;
     }
 
     public function getFormatter() {
@@ -25,23 +36,36 @@ class Context {
         return $this->trigger;
     }
 
+    // Called when context gets destroyed.
+    public function close() {
+        $this->_closed = true;
+    }
+
+    function __destruct() {
+        if (!$this->_closed) $this->close();
+    }
+
     public function generateHTML($html) {
-        $this->getFormatter()->generateHTML($html);
+        $this->getParent()->generateHTML($html);
     }
 
     public function generate($text) {
-        $this->getFormatter()->generate($text);
+        $this->getParent()->generate($text);
     }
     
     public function generateHTMLInline($html) {
-        $this->getFormatter()->generateHTMLInline($html);
+        $this->getParent()->generateHTMLInline($html);
+    }
+    
+    public function log() {
+        call_user_func_array(array($this->getFormatter(), "log"), func_get_args());
     }
 
     public function replaceSpecials($line) {
         return htmlspecialchars(preg_replace('/\s+/', ' ', $line));
     }
     
-    public function formatLines(Context &$ctx, $lines) {
+    public function formatLines(Context $ctx, $lines) {
         foreach ($lines as $line) {
             $ctx->formatLine($ctx, $line);
         }
@@ -50,6 +74,7 @@ class Context {
             if ($ctx->getTrigger()) {
                 $ctx->getTrigger()->callEnd($ctx);
             }
+            $ctx->close();
             $ctx = $ctx->getParent();
         }
     }
@@ -79,8 +104,13 @@ class Context {
             }
         }
 
-        $ctx->generate(" ");
-        $ctx->inlineFormat($line);        
+        if (!$this->getRoot()->__isFirstLine) {
+            $this->generate(" ");
+        } else {
+            $this->getRoot()->__isFirstLine = false;
+        }
+        
+        $ctx->inlineFormat($line); 
     }
 
     public function inlineFormat($text) {
@@ -105,14 +135,69 @@ class Context {
             }
 
             $lowest->callback($this, $matchToCall);
-            $this->inlineFormat(substr($text, $matches[0][1] + strlen($matches[0][0])));
+            $toFormat = substr($text, $matches[0][1] + strlen($matches[0][0]));
+            if (!empty($toFormat)) {
+                $this->inlineFormat($toFormat);
+            }
         } else {
             $this->generate($this->replaceSpecials($text));
         }
     }
 }
 
+abstract class CapturedLine {
+    protected $data;
+
+    function __construct($data) {
+        $this->data = $data;
+    }
+
+    abstract function generate(Context $ctx);
+}
+
+class CapturedHTMLLine extends CapturedLine {
+    function generate(Context $ctx) { $ctx->generateHTML($this->data); }
+}
+
+class CapturedInlineHTMLLine extends CapturedHTMLLine {
+    function generate(Context $ctx) { $ctx->generateHTMLInline($this->data); }
+}
+
+class CapturedTextLine extends CapturedLine {
+    function generate(Context $ctx) { $ctx->generate($this->data); }
+}
+
+class CapturingContext extends Context {
+    protected $lines = array();
+
+    function generateHTML($html) {
+        $this->log("Captured block '%s'", trim($html));
+        $this->lines[] = new CapturedHTMLLine($html);
+    }
+
+    function generateHTMLInline($html) {
+        $this->log("Captured inline '%s'", trim($html));
+        $this->lines[] = new CapturedInlineHTMLLine($html);
+    }
+
+    function generate($text) {
+        $this->log("Captured text '%s'", trim($text));
+        $this->lines[] = new CapturedTextLine($text);
+    }
+
+    function close() {
+        $parent = $this->getParent();
+        foreach ($this->lines as $line) {
+            $line->generate($parent);
+        }
+
+        parent::close();
+    }
+}
+
 class RootContext extends Context {
+    protected $__isFirstLine = true;
+
     function __construct(\lib\formatter\WikiFormatter $formatter) {
         $this->formatter = $formatter;
         parent::__construct($this);
@@ -121,9 +206,25 @@ class RootContext extends Context {
     function getParent() {
         return $this;
     }
+    
+    function getRoot() {
+        return $this;
+    }
 
     function getFormatter() {
         return $this->formatter;
+    }
+
+    function generateHTML($html) {
+        $this->getFormatter()->generateHTML($html);
+    }
+
+    function generateHTMLInline($html) {
+        $this->getFormatter()->generateHTMLInline($html);
+    }
+
+    function generate($text) {
+        $this->getFormatter()->generate($text);
     }
 }
 
