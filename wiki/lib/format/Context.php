@@ -85,22 +85,25 @@ class Context {
             if (preg_match($re, $line)) {
                 $trigger->callEnd($ctx);
                 $ctx = $ctx->getParent();
+            } else {
+                if (!preg_match($ctx->getTrigger()->getRegExp($ctx), $line, $matches)) {
+                    $matches = NULL;
+                }
+                $ctx->getTrigger()->callLine($ctx, $line, $matches);
+                return;
             }
+        }
+
+        // If we have active context that has trigger, do not search through other ones.
+        if ($ctx->getTrigger()) {
+            
         }
 
         foreach (\lib\formatter\WikiFormatter::$lineTriggers as $trigger) {
             if (preg_match($trigger->getRegExp($ctx), $line, $matches)) {
-                $oldctx = NULL;
-                
-                if ($ctx->getTrigger() != $trigger) {
-                    $oldctx = $ctx;
-                    $ctx = $trigger->getContext($ctx, $line, $matches);
-                }
-
-                if ($oldctx != $ctx) {
-                    $trigger->callLine($ctx, $line, $matches);
-                    return;
-                }
+                $ctx = $trigger->getContext($ctx, $line, $matches);
+                $trigger->callLine($ctx, $line, $matches);
+                return;
             }
         }
 
@@ -171,17 +174,26 @@ class CapturingContext extends Context {
     protected $lines = array();
 
     function generateHTML($html) {
-        $this->log("Captured block '%s'", trim($html));
+        if (!empty($html)) {
+            $this->log("Captured block '%s'", trim($html));
+        }
+
         $this->lines[] = new CapturedHTMLLine($html);
     }
 
     function generateHTMLInline($html) {
-        $this->log("Captured inline '%s'", trim($html));
+        if (!empty($html)) {
+            $this->log("Captured inline '%s'", trim($html));
+        }
+
         $this->lines[] = new CapturedInlineHTMLLine($html);
     }
 
     function generate($text) {
-        $this->log("Captured text '%s'", trim($text));
+        if (!empty($text)) {
+            $this->log("Captured text '%s'", trim($text));
+        }
+
         $this->lines[] = new CapturedTextLine($text);
     }
 

@@ -37,11 +37,7 @@ class Block extends LineTrigger {
     }
 
     function getRegExp(Context $ctx) {
-        if ($ctx instanceof BlockContext) {
-            return '/.*/';
-        } else {
-            return '/^{{{(?!.*}}})(.*?)$/';
-        }
+        return '/^{{{(?!.*}}})(.*?)$|{{{(.*?)}}}$/';
     }
     
     function getEndRegExp(Context $ctx) {
@@ -50,17 +46,23 @@ class Block extends LineTrigger {
     
     function getContext(Context $parent, $line, $matches) {
         $ctx = new BlockContext($parent, $this);
-        $ctx->firstline = $matches[1];
+        if (isset($matches[1]) && !empty($matches[1])) {
+            $ctx->firstline = $matches[1];
+        } elseif (isset($matches[2]) && !empty($matches[2])) {
+            $ctx->firstline = $matches[2];
+        }
         return $ctx;
     }
     
     function callLine(Context $ctx, $line, $matches) {
+        if ($line == '}}}' || (is_array($matches) && isset($matches[2]))) {
+            $ctx->endRe = '/.*/'; // Anything that follows ends the block.
+        } elseif (!$ctx->isFirstLine) {
+            $ctx->lines[] = $line;
+        }
+
         if ($ctx->isFirstLine) {
             $ctx->isFirstLine = false;
-        } elseif ($line == '}}}') {
-            $ctx->endRe = '/.*/'; // Anything that follows ends the block.
-        } else {
-            $ctx->lines[] = $line;
         }
     }
     

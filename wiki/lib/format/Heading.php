@@ -26,7 +26,7 @@ class Heading extends LineTrigger {
 
     static function Create($level) {
         $h = new Heading();
-        $h->startRe = sprintf('/^%s([^=].*)%s$/', str_repeat("=", $level + 1), str_repeat("=", $level + 1));
+        $h->startRe = sprintf('/^%s([^=].*)%s$/', str_repeat("=", $level), str_repeat("=", $level));
         $h->tagName = sprintf("h%d", $level);
         $h->level = $level;
         
@@ -71,8 +71,7 @@ class Heading extends LineTrigger {
     static function testSuite() {
         self::testFormat(<<<EOF
 == h1 ==
-{{{toc
-}}}
+{{{toc}}}
 
 === h2 1 ===
 === h2 2 ===
@@ -81,7 +80,7 @@ class Heading extends LineTrigger {
 EOF
 ,
 <<<EOF
-<h1>h1 </h1>
+<h2>h1 </h2>
 <div class="toc">
 <ul>
     <li>h1 
@@ -97,10 +96,10 @@ EOF
 </li>
 </ul>
 </div>
-<h2>h2 1 </h2>
-<h2>h2 2 </h2>
-<h3>h3 </h3>
-<h2>h2 3 </h2>
+<h3>h2 1 </h3>
+<h3>h2 2 </h3>
+<h4>h3 </h4>
+<h3>h2 3 </h3>
 EOF
 );
     }
