@@ -1,0 +1,99 @@
+WiKi syntax
+
+Heading
+
+    == Heading first level ==
+    === Heading second level ===
+    ==== Heading third level ====
+    ===== Heading fourth level =====
+    ====== Heading fifth level =======
+
+    To generate table of contents, use:
+    {{{toc}}}
+
+Basic formatting
+
+    **bold text**
+    //italics text//
+    __underlined text__
+    --strike-through text--
+    ''computer code''
+
+    {{{
+    computer code
+    on multiple lines
+    }}}
+
+Lines
+
+    four or more dashes on line
+    ----
+    produces horizontal rule
+
+
+Links
+
+    Links in text are converted automatically: www.google.com, http://www.google.com/.
+    [[http://www.google.com/?q=wiki]]
+    [[http://www.google.com/|Link name]]
+    [[MainPage]] - link to other wiki pages
+
+Images (TODO)
+
+    ((http://www.google.com/logo.gif))
+    ((http://www.google.com/logo.gif|Image with caption))
+
+Escaping
+
+    {{{text here will not be formatted}}}
+
+Lists
+
+    Unordered list:
+
+        * Item 1
+        * Item 2
+         * Item 2.1
+         * Item 2.2
+          * Item 2.2.1
+        * Item 3
+
+    Ordered list:
+
+        - Ordered list
+        - With same syntax as unordered
+
+    Multiple lines in list item
+
+        * List item
+          with multiple lines
+          {{{
+              can contain other formatting functions
+          }}}
+        * Another list item
+
+Tables
+
+    ||simple||table||
+    ||-
+    ||with||two||rows||
+
+    Advanced tables:
+
+        ||^column header          ^||^column header     ^||
+        || on multiple lines       ||                    ||
+        ||-
+        ||^row header             ^||row item            ||
+        ||-
+        ||<left aligned item       ||>right aligned item ||
+        ||alignment should be      ||                    ||
+        ||only on first line       ||                    ||
+        ||-
+        ||* Table cell can contain ||                    ||
+        ||* other formatting too   ||                    || 
+
+Quoting:
+
+    > Quoted text
+    >> Multiple levels of quoted text
+    > Quoted text
