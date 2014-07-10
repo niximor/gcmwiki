@@ -16,6 +16,7 @@ require_once "lib/format/Block.php";
 require_once "lib/format/BasicFormat.php";
 require_once "lib/format/Link.php";
 require_once "lib/format/Image.php";
+require_once "lib/format/Variables.php";
 
 use lib\formatter\WikiFormatter;
 use lib\formatter\format;
@@ -40,6 +41,7 @@ WikiFormatter::installInlineTrigger(new format\Link());
 WikiFormatter::installInlineTrigger(new format\LinkInText());
 WikiFormatter::installInlineTrigger(new format\PlainText());
 WikiFormatter::installInlineTrigger(new format\Image());
+WikiFormatter::installInlineTrigger(new format\InlineVariable());
 
 ?>
 

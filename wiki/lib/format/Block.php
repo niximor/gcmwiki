@@ -19,6 +19,7 @@ class BlockContext extends Context {
     public $lines = array();
     public $endRe = '/$^/';
     public $isFirstLine = true;
+    public $inheritanceLevel = 0;
 }
 
 class Block extends LineTrigger {
@@ -37,7 +38,7 @@ class Block extends LineTrigger {
     }
 
     function getRegExp(Context $ctx) {
-        return '/^{{{(?!.*}}})(.*?)$|{{{(.*?)}}}$/';
+        return '/^\s*{{{(?!.*}}})(.*?)$|^\s*{{{(.*?)}}}$/';
     }
     
     function getEndRegExp(Context $ctx) {
@@ -55,10 +56,15 @@ class Block extends LineTrigger {
     }
     
     function callLine(Context $ctx, $line, $matches) {
-        if ($line == '}}}' || (is_array($matches) && isset($matches[2]))) {
+        if (!$ctx->isFirstLine && strpos($line, '{{{') !== false) {
+            ++$ctx->inheritanceLevel;
+        }
+
+        if ($ctx->inheritanceLevel <= 0 && (ltrim($line) == '}}}' || (is_array($matches) && isset($matches[2])))) {
             $ctx->endRe = '/.*/'; // Anything that follows ends the block.
         } elseif (!$ctx->isFirstLine) {
             $ctx->lines[] = $line;
+            if (ltrim($line) == '}}}') --$ctx->inheritanceLevel;
         }
 
         if ($ctx->isFirstLine) {
@@ -103,6 +109,23 @@ aaa preformatted text that **does** not get wiki formatted bbb not //formatted//
 some c++ code</pre>
 "
 );
+
+        self::testFormat("before
+{{{code
+inheritance test:
+{{{
+something
+}}}
+}}}
+aaa",
+"before
+<pre>code
+inheritance test:
+{{{
+something
+}}}</pre>
+aaa");
     }
+
 }
 
