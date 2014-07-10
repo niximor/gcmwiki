@@ -7,60 +7,54 @@ class Image extends InlineTrigger {
         return '/\(\((.*?)\)\)/';
     }
 
-    protected function generateImgTag(Context $ctx, $url, $inBox = false) {
-        $splitted = preg_split('/#/', $url, 2);
-        $url = htmlspecialchars($splitted[0]);
+    protected function generateImgTag(Context $ctx, $url, $params = "", $inBox = false) {
         $align = NULL;
 
-        if (isset($splitted[1])) {
-            $params = preg_split('/&/', $splitted[1]);
-            $css = array();
+        $params = preg_split('/,/', $params);
+        $css = array();
 
-            // Need to get image to retrieve dimensions.
-            if (preg_match('|://|', $url)) {
-                $ctx->log("Get image size for ".$url);
-                $size = getimagesize($url);
-            } elseif (preg_match('|^/|', $url)) {
-                $root = dirname($_SERVER["SCRIPT_NAME"]);
-                $oldurl = $url;
-                $url = $root.$url;
+        // Need to get image to retrieve dimensions.
+        if (preg_match('|://|', $url)) {
+            $ctx->log("Get image size for ".$url);
+            $size = getimagesize($url);
+        } elseif (preg_match('|^/|', $url)) {
+            $root = dirname($_SERVER["SCRIPT_NAME"]);
+            $oldurl = $url;
+            $url = $root.$url;
 
-                $myfile = dirname($_SERVER["SCRIPT_FILENAME"]);
-                $ctx->log("Get image size for ".$myfile.$url);
+            $myfile = dirname($_SERVER["SCRIPT_FILENAME"]);
+            $ctx->log("Get image size for ".$myfile.$url);
 
-                $size = getimagesize($myfile.$oldurl);
-            } elseif (preg_match('|:|', $url)) {
-                // Ask URL plugin to retrieve the image data.
-            }
+            $size = getimagesize($myfile.$oldurl);
+        } elseif (preg_match('|:|', $url)) {
+            // Ask URL plugin to retrieve the image data.
+        }
 
-            if (!isset($size)) return NULL;
+        if (!isset($size)) return NULL;
 
-            foreach ($params as $param) {
-                if (preg_match('/^([0-9]+)(|px|em)x([0-9]+)(|px|em)$/i', $param, $matches)) {
-                    if (empty($matches[2])) $matches[2] = "px";
-                    if (empty($matches[4])) $matches[4] = "px";
+        foreach ($params as $param) {
+            if (preg_match('/^([0-9]+)(|px|em)x([0-9]+)(|px|em)$/i', $param, $matches)) {
+                if (empty($matches[2])) $matches[2] = "px";
+                if (empty($matches[4])) $matches[4] = "px";
 
-                    $css[] = sprintf("width: %d%s;", $matches[1], strtolower($matches[2]));
-                    $css[] = sprintf("height: %d%s;", $matches[3], strtolower($matches[4]));
-                } elseif (preg_match('/^([0-9]+(\.[0-9]+)?)%$/', $param, $matches)) {
-                    $width = round($size[0] / 100.0 * (double)$matches[1]);
-                    $css[] = sprintf("width: %dpx;", $width);
-                } elseif (preg_match('/^(left|right)$/i', $param, $matches)) {
-                    if (!$inBox) {
-                        $css[] = sprintf("float: %s;", strtolower($matches[1]));
-                    } else {
-                        $align = strtolower($matches[1]);
-                    }
+                $css[] = sprintf("width: %d%s;", $matches[1], strtolower($matches[2]));
+                $css[] = sprintf("height: %d%s;", $matches[3], strtolower($matches[4]));
+            } elseif (preg_match('/^([0-9]+(\.[0-9]+)?)%$/', $param, $matches)) {
+                $width = round($size[0] / 100.0 * (double)$matches[1]);
+                $css[] = sprintf("width: %dpx;", $width);
+            } elseif (preg_match('/^(left|right)$/i', $param, $matches)) {
+                if (!$inBox) {
+                    $css[] = sprintf("float: %s;", strtolower($matches[1]));
+                } else {
+                    $align = strtolower($matches[1]);
                 }
             }
+        }
 
-            if (!empty($css)) {
-                $html = "<img src=\"".$url."\" style=\"".implode(" ", $css)."\" />";
-            } else {
-                $html = "<img src=\"".$url."\" />";
-            }
+        if (!empty($css)) {
+            $html = "<img src=\"".htmlspecialchars($url)."\" style=\"".implode(" ", $css)."\" />";
         } else {
-            $html = "<img src=\"".$url."\" />";
+            $html = "<img src=\"".htmlspecialchars($url)."\" />";
         }
 
         if (!$inBox) {
@@ -71,11 +65,22 @@ class Image extends InlineTrigger {
     }
 
     function callback(Context $ctx, $matches) {
-        $splitted = preg_split('/\|/', $matches[1], 2);
+        $splitted = preg_split('/\|/', $matches[1], 3);
 
         // Image with caption
-        list($url, $caption) = $splitted;
-        list($html, $align) = $this->generateImgTag($ctx, $url, true);
+        if (isset($splitted[1])) {
+            if (isset($splitted[2])) {
+                list($url, $params, $caption) = $splitted;
+            } else {
+                list($url, $caption) = $splitted;
+                $params = "";
+            }
+        } else {
+            list($url) = $splitted;
+            $params = "";
+            $caption = "";
+        }
+        list($html, $align) = $this->generateImgTag($ctx, $url, $params, true);
 
         // Not correct URL of image, render as plain text.
         if (is_null($html)) {
@@ -114,5 +119,34 @@ class Image extends InlineTrigger {
         }
 
         $ctx->generateHTMLInline("\n</span></span>\n");
+    }
+
+    static function testSuite() {
+        $url = dirname($_SERVER["SCRIPT_NAME"]);
+        self::testFormat("((/static/logo.png))
+((/static/logo.png|50%|))
+((/static/logo.png|right,50%|Image with caption))
+((/static/logo.png|Image with caption))",
+"<span class=\"image\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
+\t<img src=\"$url/static/logo.png\" />
+</span></span>
+<span class=\"image\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
+\t<img src=\"$url/static/logo.png\" style=\"width: 125px;\" />
+</span></span>
+<span class=\"image withCaption alignRight\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
+\t<img src=\"$url/static/logo.png\" style=\"width: 125px;\" />
+\t<br />
+\t<span class=\"caption\">
+\t\tImage with caption
+\t</span>
+</span></span>
+ <span class=\"image withCaption\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
+\t<img src=\"$url/static/logo.png\" />
+\t<br />
+\t<span class=\"caption\">
+\t\tImage with caption
+\t</span>
+</span></span>
+");
     }
 }

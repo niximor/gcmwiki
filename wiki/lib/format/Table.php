@@ -209,11 +209,12 @@ EOF
 	<li>and first level again</li>
 </ul>
 and something that is not a list.</td>
-			<td style="text-align: center;">x</td>
-			<td style="text-align: center;">y</td>
+			<td style="text-align: center;">x </td>
+			<td style="text-align: center;">y </td>
 		</tr>
 	</tbody>
 </table>
+
 EOF
 );
     }

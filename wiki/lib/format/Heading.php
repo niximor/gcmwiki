@@ -47,7 +47,7 @@ class Heading extends LineTrigger {
             $root->TABLE_OF_CONTENTS = array();
         }
         
-        $root->TABLE_OF_CONTENTS[] = str_repeat(" ", $this->level - 1)."* ".$matches[1]."\n";
+        $root->TABLE_OF_CONTENTS[] = str_repeat(" ", $this->level - 2)."* ".$matches[1]."\n";
     
         $context->generateHTML(sprintf("<%s>", $this->tagName));
         $context->inlineFormat($matches[1]);
@@ -83,15 +83,15 @@ EOF
 <h2>h1 </h2>
 <div class="toc">
 <ul>
-    <li>h1 
-        <ul>
-            <li>h2 1 </li>
-            <li>h2 2 
-                <ul>
-                    <li>h3 </li>
-                </ul>
-            </li>
-            <li>h2 3 </li>
+\t<li>h1 
+\t\t<ul>
+\t\t\t<li>h2 1 </li>
+\t\t\t<li>h2 2 
+\t\t\t\t<ul>
+\t\t\t\t\t<li>h3 </li>
+\t\t\t\t</ul>
+\t\t\t</li>
+\t\t\t<li>h2 3 </li>
 </ul>
 </li>
 </ul>
@@ -100,6 +100,7 @@ EOF
 <h3>h2 2 </h3>
 <h4>h3 </h4>
 <h3>h2 3 </h3>
+
 EOF
 );
     }

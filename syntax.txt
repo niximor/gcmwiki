@@ -38,10 +38,13 @@ Links
     [[http://www.google.com/|Link name]]
     [[MainPage]] - link to other wiki pages
 
-Images (TODO)
+Images
 
-    ((http://www.google.com/logo.gif))
-    ((http://www.google.com/logo.gif|Image with caption))
+    ((/static/logo.png))
+    ((/static/logo.png|Image with caption))
+    ((/static/logo.png|right,50%|)) - image with params, without caption
+    ((/static/logo.png|right,50%|Image with caption and params))
+
 
 Escaping
 

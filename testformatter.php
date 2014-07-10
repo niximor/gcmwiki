@@ -65,10 +65,13 @@ if (!isset($_REQUEST["wiki_text"])) {
 echo "Debug:";
 echo "<pre>";
 
-format\Lists::testSuite();
 format\BasicFormat::testSuite();
-format\Link::testSuite();
 format\Block::testSuite();
+format\Heading::testSuite();
+format\Image::testSuite();
+format\Link::testSuite();
+format\Lists::testSuite();
+format\Table::testSuite();
 
 $f = new WikiFormatter();
 $f->debug = true;
