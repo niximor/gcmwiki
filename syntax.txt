@@ -28,6 +28,14 @@ Paragraph
 
     Single line break \\ this is no another line.
 
+    One empty line between text breaks into
+    new paragraph
+
+    Like this one.
+
+    Single line break inside text
+    does not mean anything.
+
 Lines
 
     four or more dashes on line
@@ -99,7 +107,7 @@ Tables
         ||* Table cell can contain ||                    ||
         ||* other formatting too   ||                    || 
 
-Quoting:
+Quoting
 
     > Quoted text
     >> Multiple levels of quoted text
@@ -107,17 +115,17 @@ Quoting:
 
 Variables:
 
-    {{{set:variable_name
+    {{{define:variable_name
     Variable content
     }}}
 
-    {{{set:variable_name[]
+    {{{define:variable_name[]
     Row 1
     Row 2
     Row 3
     }}}
 
-    {{{multiset:
+    {{{multidef:
     variable1: Value
     variable2: Value
      optionally on next line
@@ -130,8 +138,12 @@ Variables:
 
     {{{var:variable_name:Default value}}}
     
-    {{{ifset:variable_name
+    {{{ifdef:variable_name
     Content that gets rendered only if variable is set.
+    }}}
+
+    {{{ifndef:variable_name
+    Content that gets rendered only if variable is not set.
     }}}
     
     {{{foreach:variable_name
