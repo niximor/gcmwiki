@@ -121,9 +121,9 @@ class Image extends InlineTrigger {
         $ctx->generateHTMLInline("\n</span></span>\n");
     }
 
-    static function testSuite() {
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
         $url = dirname($_SERVER["SCRIPT_NAME"]);
-        self::testFormat("((/static/logo.png))
+        self::testFormat($f, "((/static/logo.png))
 ((/static/logo.png|50%|))
 ((/static/logo.png|right,50%|Image with caption))
 ((/static/logo.png|Image with caption))",

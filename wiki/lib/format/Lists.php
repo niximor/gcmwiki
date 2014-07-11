@@ -110,8 +110,8 @@ class Lists extends LineTrigger {
         $context->currentRe = NULL;
     }
 
-    static function testSuite() {
-        self::testFormat("* item 1
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, "* item 1
  * item 1.1
   * item 1.1.1
  * item 1.2

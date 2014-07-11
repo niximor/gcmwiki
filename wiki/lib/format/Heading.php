@@ -29,13 +29,6 @@ class Heading extends LineTrigger {
         $h->startRe = sprintf('/^%s([^=].*)%s$/', str_repeat("=", $level), str_repeat("=", $level));
         $h->tagName = sprintf("h%d", $level);
         $h->level = $level;
-        
-        static $registered = false;
-        if (!$registered) {
-            Block::registerBlockFormatter("toc", array($h, "generateToc"));
-            $registered = true;
-        }
-        
         return $h;
     }
 
@@ -68,8 +61,8 @@ class Heading extends LineTrigger {
         $beforeRoot->setParent($capture);
     }
 
-    static function testSuite() {
-        self::testFormat(<<<EOF
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, <<<EOF
 == h1 ==
 {{{toc}}}
 

@@ -84,8 +84,8 @@ class Link extends InlineTrigger {
         }
     }
 
-    static function testSuite() {
-        self::testFormat("Link na www.google.com a http://www.google.com, stejne tak taky [[www.google.com]] a nebo [[http://www.google.com]] a taky [[www.google.com|s popiskem]].",
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, "Link na www.google.com a http://www.google.com, stejne tak taky [[www.google.com]] a nebo [[http://www.google.com]] a taky [[www.google.com|s popiskem]].",
 <<<EOF
 
 <p>

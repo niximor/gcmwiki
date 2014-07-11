@@ -5,8 +5,7 @@ namespace lib\formatter\format;
 require_once "lib/format/Context.php";
 
 abstract class Trigger {
-    static function testFormat($in, $out) {
-        $fmt = new \lib\formatter\WikiFormatter;
+    static function testFormat(\lib\formatter\WikiFormatter $fmt, $in, $out) {
         $realOut = $fmt->format($in);
         if ($realOut != $out) {
             $pos = strspn($out ^ $realOut, "\0");

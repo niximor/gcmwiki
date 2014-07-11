@@ -5,43 +5,52 @@ namespace lib\formatter\format;
 require_once "lib/format/Block.php";
 
 class Variables {
-    protected static $variables = array();
+    protected $variables = array();
 
-    public static function set($name, $value) {
-        self::$variables[$name] = $value;
+    public function register(Block $format) {
+        $format->registerBlockFormatter("ifdef", array($this, "ifCall"));
+        $format->registerBlockFormatter("ifndef", array($this, "ifNotSetCall"));
+        $format->registerBlockFormatter("var", array($this, "echoCall"));
+        $format->registerBlockFormatter("foreach", array($this, "foreachCall"));
+        $format->registerBlockFormatter("define", array($this, "defineCall"));
+        $format->registerBlockFormatter("multidef", array($this, "multiDefCall"));
     }
 
-    protected static function varExists($name) {
-        return isset(self::$variables[$name]);
+    public function set($name, $value) {
+        $this->variables[$name] = $value;
     }
 
-    protected static function getVar($name) {
-        if (self::varExists($name)) {
-            return self::$variables[$name];
+    protected function varExists($name) {
+        return isset($this->variables[$name]);
+    }
+
+    protected function getVar($name) {
+        if ($this->varExists($name)) {
+            return $this->variables[$name];
         } else {
             return NULL;
         }
     }
 
-    public static function ifCall(Context $ctx, $params) {
-        if (isset($params[1]) && self::varExists($params[1])) {
+    public function ifCall(Context $ctx, $params) {
+        if (isset($params[1]) && $this->varExists($params[1])) {
             $parent = $ctx->getParent();
             $parent->formatLines($parent, $ctx->lines);
         }
     }
 
-    public static function ifNotSetCall(Context $ctx, $params) {
-        if (isset($params[1]) && !self::varExists($params[1])) {
+    public function ifNotSetCall(Context $ctx, $params) {
+        if (isset($params[1]) && !$this->varExists($params[1])) {
             $parent = $ctx->getParent();
             $parent->formatLines($parent, $ctx->lines);
         }
     }
 
-    public static function echoCall(Context $ctx, $params) {
+    public function echoCall(Context $ctx, $params) {
         if (isset($params[1])) {
             $parent = $ctx->getParent();
-            if (self::varExists($params[1])) {
-                $lines = self::getVar($params[1]);
+            if ($this->varExists($params[1])) {
+                $lines = $this->getVar($params[1]);
                 if (!is_array($lines)) {
                     $lines = preg_split('/\n/', $lines);
                 }
@@ -52,7 +61,7 @@ class Variables {
         }
     }
 
-    public static function foreachCall(Context $ctx, $params) {
+    public function foreachCall(Context $ctx, $params) {
         $itemname = "row";
         if (isset($params[2]) && !empty($params[2])) {
             $itemname = $params[2];
@@ -60,29 +69,29 @@ class Variables {
 
         if (isset($params[1])) {
             $parent = $ctx->getParent();
-            if (is_array(self::getVar($params[1]))) {
-                foreach (self::getVar($params[1]) as $row) {
-                    self::set($itemname, $row);
+            if (is_array($this->getVar($params[1]))) {
+                foreach ($this->getVar($params[1]) as $row) {
+                    $this->set($itemname, $row);
                     $parent->formatLines($parent, $ctx->lines);
                 }
             } else {
-                self::set($itemname, self::getVar($name));
+                $this->set($itemname, $this->getVar($name));
                 $parent->formatLines($parent->getParent(), $ctx->lines);
             }
         }
     }
 
-    public static function defineCall(Context $ctx, $params) {
+    public function defineCall(Context $ctx, $params) {
         if (!isset($params[1])) return;
 
         if (substr($params[1], -2) == '[]') {
-            self::set(substr($params[1], 0, -2), $ctx->lines);
+            $this->set(substr($params[1], 0, -2), $ctx->lines);
         } else {
-            self::set($params[1], implode("\n", $ctx->lines));
+            $this->set($params[1], implode("\n", $ctx->lines));
         }
     }
 
-    public static function multiDefCall(Context $ctx, $params) {
+    public function multiDefCall(Context $ctx, $params) {
         // Parse http-header-like string and get variables.
         $currentVarName = NULL;
         $currentVarValue = NULL;
@@ -93,9 +102,9 @@ class Variables {
                 if (!is_null($currentVarName)) {
                     // Previous variable ends.
                     if ($currentVarArray) {
-                        self::set($currentVarName, $currentVarValue);
+                        $this->set($currentVarName, $currentVarValue);
                     } else {
-                        self::set($currentVarName, implode("\n", $currentVarValue));
+                        $this->set($currentVarName, implode("\n", $currentVarValue));
                     }
                 }
 
@@ -110,23 +119,21 @@ class Variables {
 
         if (!is_null($currentVarName)) {
             if ($currentVarArray) {
-                self::set($currentVarName, $currentVarValue);
+                $this->set($currentVarName, $currentVarValue);
             } else {
-                self::set($currentVarName, implode("\n", $currentVarValue));
+                $this->set($currentVarName, implode("\n", $currentVarValue));
             }
         }
     }
 }
 
-$vars = new Variables();
-Block::registerBlockFormatter("ifdef", array($vars, "ifCall"));
-Block::registerBlockFormatter("ifndef", array($vars, "ifNotSetCall"));
-Block::registerBlockFormatter("var", array($vars, "echoCall"));
-Block::registerBlockFormatter("foreach", array($vars, "foreachCall"));
-Block::registerBlockFormatter("define", array($vars, "defineCall"));
-Block::registerBlockFormatter("multidef", array($vars, "multiDefCall"));
-
 class InlineVariable extends InlineTrigger {
+    protected $variables;
+
+    function __construct(Variables $variables) {
+        $this->variables = $variables;
+    }
+
     function getRegExp(Context $ctx) {
         return '/{\$(.*?)(|(.*?))?}/';
     }
@@ -137,11 +144,11 @@ class InlineVariable extends InlineTrigger {
             $params[] = $matches[3];
         }
 
-        Variables::echoCall($ctx, $params);
+        $this->variables->echoCall($ctx, $params);
     }
 
-    static function testSuite() {
-        self::testFormat(<<<'EOF'
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, <<<'EOF'
 {{{define:var_name
 Value
 }}}

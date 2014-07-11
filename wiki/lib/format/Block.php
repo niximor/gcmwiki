@@ -23,12 +23,12 @@ class BlockContext extends Context {
 }
 
 class Block extends LineTrigger {
-    protected static $blocks = array();
+    protected $blocks = array();
     
-    public static function registerBlockFormatter($name, $callback) {
-        if (!isset(self::$blocks[$name])) {
+    public function registerBlockFormatter($name, $callback) {
+        if (!isset($this->blocks[$name])) {
             if (is_callable($callback)) {
-                self::$blocks[$name] = $callback;
+                $this->blocks[$name] = $callback;
             } else {
                 throw new \RuntimeException("Second parameter of Block::registerBlockFormatter must be valid callback.");
             }
@@ -79,8 +79,8 @@ class Block extends LineTrigger {
             $ctx->generateHTML("</pre>\n");
         } else {
             $params = preg_split('/:/', $ctx->firstline);
-            if (isset(self::$blocks[$params[0]])) {
-                $cb = self::$blocks[$params[0]];
+            if (isset($this->blocks[$params[0]])) {
+                $cb = $this->blocks[$params[0]];
                 $cb($ctx, $params);
             } else {
                 $ctx->generateHTML("\n<pre>");
@@ -91,8 +91,8 @@ class Block extends LineTrigger {
         }
     }
     
-    static function testSuite() {
-        self::testFormat("{{{
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, "{{{
 this is raw escaped block
 }}}
 aaa {{{preformatted text that **does** not get wiki formatted}}} bbb
@@ -115,7 +115,7 @@ some c++ code</pre>
 "
 );
 
-        self::testFormat("before
+        self::testFormat($f, "before
 {{{code
 inheritance test:
 {{{

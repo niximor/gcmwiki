@@ -33,8 +33,8 @@ class BasicFormat extends ExtendedFormat {
         return new self($seq, $seq, "<".$tag.">", "</".$tag.">");
     }
 
-    static function testSuite() {
-        self::testFormat(
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, 
 "Ahoj! **tohle je bold**, __tohle underline__, //tohle italika// a **//__tohle mix__//**",
 "
 <p>
@@ -54,8 +54,8 @@ class LineBreak extends InlineTrigger {
         $ctx->generateHTMLInline("<br />");
     }
 
-    static function testSuite() {
-        self::testFormat(<<<EOF
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, <<<EOF
 Lorem ipsum dolor \\\\
 sit amet
 

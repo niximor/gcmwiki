@@ -15,15 +15,15 @@ class WikiFormatter {
 
     public $debug = false;
 
-    public static $lineTriggers = array();
-    public static $inlineTriggers = array();
+    public $lineTriggers = array();
+    public $inlineTriggers = array();
 
-	public static function installLineTrigger(format\LineTrigger $trigger) {
-		self::$lineTriggers[] = $trigger;
+	public function installLineTrigger(format\LineTrigger $trigger) {
+		$this->lineTriggers[] = $trigger;
 	}
 
-    public static function installInlineTrigger(format\InlineTrigger $trigger) {
-        self::$inlineTriggers[] = $trigger;
+    public function installInlineTrigger(format\InlineTrigger $trigger) {
+        $this->inlineTriggers[] = $trigger;
     }
 
     public function log($msg) {
@@ -35,6 +35,10 @@ class WikiFormatter {
 
     public function format($text) {
         $this->output = array();
+        $this->space = true;
+        $this->inParagraph = false;
+        $this->startParagraph = true;
+        $this->currentLineLength = 0;
 
         $lines = explode("\n", $text);
         $ctx = $root = new format\RootContext($this);

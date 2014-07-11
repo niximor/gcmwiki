@@ -101,7 +101,7 @@ class Context {
             }
         }
 
-        foreach (\lib\formatter\WikiFormatter::$lineTriggers as $trigger) {
+        foreach ($this->getFormatter()->lineTriggers as $trigger) {
             if (preg_match($trigger->getRegExp($ctx), $line, $matches)) {
                 $ctx = $trigger->getContext($ctx, $line, $matches);
                 $trigger->callLine($ctx, $line, $matches);
@@ -125,7 +125,7 @@ class Context {
     public function inlineFormat($text) {
         $lowest = NULL;
         $lowestIndex = 0;
-        foreach (\lib\formatter\WikiFormatter::$inlineTriggers as $trigger) {
+        foreach ($this->getFormatter()->inlineTriggers as $trigger) {
             if (preg_match($trigger->getRegExp($this), $text, $matches, PREG_OFFSET_CAPTURE)) {
                 if (is_null($lowest) || $lowestIndex > $matches[0][1]) {
                     $lowest = $trigger;

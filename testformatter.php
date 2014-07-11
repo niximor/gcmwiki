@@ -21,28 +21,35 @@ require_once "lib/format/Variables.php";
 use lib\formatter\WikiFormatter;
 use lib\formatter\format;
 
-WikiFormatter::installLineTrigger(new format\Blockquote());
-WikiFormatter::installLineTrigger(format\Heading::Create(2));
-WikiFormatter::installLineTrigger(format\Heading::Create(3));
-WikiFormatter::installLineTrigger(format\Heading::Create(4));
-WikiFormatter::installLineTrigger(format\Heading::Create(5));
-WikiFormatter::installLineTrigger(format\Heading::Create(6));
-WikiFormatter::installLineTrigger(new format\Line());
-WikiFormatter::installLineTrigger(new format\Lists());
-WikiFormatter::installLineTrigger(new format\Table());
-WikiFormatter::installLineTrigger(new format\Block());
+$f = new WikiFormatter();
 
-WikiFormatter::installInlineTrigger(format\BasicFormat::Create("**", "strong"));
-WikiFormatter::installInlineTrigger(format\BasicFormat::Create("//", "em"));
-WikiFormatter::installInlineTrigger(format\BasicFormat::Create("__", "ins"));
-WikiFormatter::installInlineTrigger(format\BasicFormat::Create("--", "del"));
-WikiFormatter::installInlineTrigger(format\BasicFormat::Create("''", "code"));
-WikiFormatter::installInlineTrigger(new format\Link());
-WikiFormatter::installInlineTrigger(new format\LinkInText());
-WikiFormatter::installInlineTrigger(new format\PlainText());
-WikiFormatter::installInlineTrigger(new format\Image());
-WikiFormatter::installInlineTrigger(new format\InlineVariable());
-WikiFormatter::installInlineTrigger(new format\LineBreak());
+$f->installLineTrigger(new format\Blockquote());
+$f->installLineTrigger($heading = format\Heading::Create(2));
+$f->installLineTrigger(format\Heading::Create(3));
+$f->installLineTrigger(format\Heading::Create(4));
+$f->installLineTrigger(format\Heading::Create(5));
+$f->installLineTrigger(format\Heading::Create(6));
+$f->installLineTrigger(new format\Line());
+$f->installLineTrigger(new format\Lists());
+$f->installLineTrigger(new format\Table());
+$f->installLineTrigger($block = new format\Block());
+
+$variables = new format\Variables();
+$variables->register($block);
+
+$block->registerBlockFormatter("toc", array($heading, "generateToc"));
+
+$f->installInlineTrigger(format\BasicFormat::Create("**", "strong"));
+$f->installInlineTrigger(format\BasicFormat::Create("//", "em"));
+$f->installInlineTrigger(format\BasicFormat::Create("__", "ins"));
+$f->installInlineTrigger(format\BasicFormat::Create("--", "del"));
+$f->installInlineTrigger(format\BasicFormat::Create("''", "code"));
+$f->installInlineTrigger(new format\Link());
+$f->installInlineTrigger(new format\LinkInText());
+$f->installInlineTrigger(new format\PlainText());
+$f->installInlineTrigger(new format\Image());
+$f->installInlineTrigger(new format\InlineVariable($variables));
+$f->installInlineTrigger(new format\LineBreak());
 
 ?>
 
@@ -66,15 +73,15 @@ if (!isset($_REQUEST["wiki_text"])) {
 echo "Debug:";
 echo "<pre>";
 
-format\BasicFormat::testSuite();
-format\Block::testSuite();
-format\Heading::testSuite();
-format\Image::testSuite();
-format\Link::testSuite();
-format\Lists::testSuite();
-format\Table::testSuite();
-format\InlineVariable::testSuite();
-format\LineBreak::testSuite();
+format\BasicFormat::testSuite($f);
+format\Block::testSuite($f);
+format\Heading::testSuite($f);
+format\Image::testSuite($f);
+format\Link::testSuite($f);
+format\Lists::testSuite($f);
+format\Table::testSuite($f);
+format\InlineVariable::testSuite($f);
+format\LineBreak::testSuite($f);
 
 $f = new WikiFormatter();
 $f->debug = true;

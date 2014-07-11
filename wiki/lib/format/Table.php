@@ -167,8 +167,8 @@ class Table extends LineTrigger {
         $context->generateHTML("</table>\n");
     }
     
-    static function testSuite() {
-        self::testFormat(
+    static function testSuite(\lib\formatter\WikiFormatter $f) {
+        self::testFormat($f, 
 <<<EOF
 ||^column 1^||^column 2^||^column 3^||
 ||-
