@@ -7,6 +7,9 @@ require_once "lib/format/Context.php";
 class WikiFormatter {
     protected $output = array();
     protected $space = true;
+    protected $inParagraph = false;
+    protected $startParagraph = true;
+
     public $debug = false;
 
     public static $lineTriggers = array();
@@ -45,11 +48,23 @@ class WikiFormatter {
             $ctx = $ctx->getParent();
         }
 
+        if ($this->inParagraph) {
+            $this->log("End paragraph");
+            $this->output[] = "\n</p>\n";
+        }
+
         return implode("", $this->output);
     }
 
     public function generateHTML($string) {
         if (empty($string)) return;
+
+        if ($this->inParagraph) {
+            $this->log("End paragraph");
+            $this->output[] = "\n</p>\n";
+            $this->inParagraph = false;
+        }
+        $this->startParagraph = false;
         
         $this->output[] = $string;
         $this->log("Generate block '%s'", trim($string));
@@ -58,6 +73,13 @@ class WikiFormatter {
     
     public function generateHTMLInline($string) {
         if (empty($string)) return;
+
+        if ($this->startParagraph && !$this->inParagraph) {
+            $this->log("Start paragraph");
+            $this->output[] = "\n<p>\n";
+            $this->startParagraph = false;
+            $this->inParagraph = true;
+        }
     	
         $this->output[] = $string;
         $this->log("Generate inline '%s'", $string);
@@ -65,17 +87,32 @@ class WikiFormatter {
     }
 
     public function generate($string) {
-    	if (empty($string)) return;
-
     	if ($this->space && \ctype_space(substr($string, 0, 1))) {
             $string = ltrim($string);
     	}
+
+        if (empty($string)) return;
+
+        if ($this->startParagraph && !$this->inParagraph) {
+            $this->log("Start paragraph");
+            $this->output[] = "\n<p>\n";
+            $this->startParagraph = false;
+            $this->inParagraph = true;
+        }
     	
-    	if (!empty($string)) {
-        	$this->output[] = $string;
-    	    $this->log("Generate string '%s'", $string);
-    	    $this->space = \ctype_space(substr($string, -1));
-    	}
+        $this->output[] = $string;
+    	$this->log("Generate string '%s'", $string);
+    	$this->space = \ctype_space(substr($string, -1));
+    }
+
+    public function newParagraph() {
+        if ($this->inParagraph) {
+            $this->log("End paragraph");
+            $this->output[] = "\n</p>\n";
+            $this->inParagraph = false;
+        }
+
+        $this->startParagraph = true;
     }
 }
 

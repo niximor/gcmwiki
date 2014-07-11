@@ -24,6 +24,10 @@ Basic formatting
     on multiple lines
     }}}
 
+Paragraph
+
+    Single line break \\ this is no another line.
+
 Lines
 
     four or more dashes on line
@@ -100,3 +104,38 @@ Quoting:
     > Quoted text
     >> Multiple levels of quoted text
     > Quoted text
+
+Variables:
+
+    {{{set:variable_name
+    Variable content
+    }}}
+
+    {{{set:variable_name[]
+    Row 1
+    Row 2
+    Row 3
+    }}}
+
+    {{{multiset:
+    variable1: Value
+    variable2: Value
+     optionally on next line
+    variable3[]: Row 1
+     Row 2
+     Row 3
+    }}}
+
+    {{{var:variable_name}}} - Output contents of variable.
+
+    {{{var:variable_name:Default value}}}
+    
+    {{{ifset:variable_name
+    Content that gets rendered only if variable is set.
+    }}}
+    
+    {{{foreach:variable_name
+    Item = {$row}
+    }}}
+    
+    {$variable_name} - inline version of {{{var:variable_name}}}

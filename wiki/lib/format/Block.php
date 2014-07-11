@@ -78,7 +78,7 @@ class Block extends LineTrigger {
             $ctx->generateHTML(htmlspecialchars(implode("\n", $ctx->lines)));
             $ctx->generateHTML("</pre>\n");
         } else {
-            $params = preg_split('/:/', $ctx->firstline, 1);
+            $params = preg_split('/:/', $ctx->firstline);
             if (isset(self::$blocks[$params[0]])) {
                 $cb = self::$blocks[$params[0]];
                 $cb($ctx, $params);
@@ -104,7 +104,11 @@ some c++ code
 }}}",
 "
 <pre>this is raw escaped block</pre>
+
+<p>
 aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa after must get formatted too. 
+</p>
+
 <pre>code:c++
 some c++ code</pre>
 "
@@ -118,13 +122,21 @@ something
 }}}
 }}}
 aaa",
-"before
+"
+<p>
+before
+</p>
+
 <pre>code
 inheritance test:
 {{{
 something
 }}}</pre>
-aaa");
+
+<p>
+aaa
+</p>
+");
     }
 
 }

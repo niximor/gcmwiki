@@ -42,6 +42,7 @@ WikiFormatter::installInlineTrigger(new format\LinkInText());
 WikiFormatter::installInlineTrigger(new format\PlainText());
 WikiFormatter::installInlineTrigger(new format\Image());
 WikiFormatter::installInlineTrigger(new format\InlineVariable());
+WikiFormatter::installInlineTrigger(new format\LineBreak());
 
 ?>
 
@@ -72,6 +73,8 @@ format\Image::testSuite();
 format\Link::testSuite();
 format\Lists::testSuite();
 format\Table::testSuite();
+format\InlineVariable::testSuite();
+format\LineBreak::testSuite();
 
 $f = new WikiFormatter();
 $f->debug = true;

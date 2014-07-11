@@ -75,6 +75,9 @@ class Context {
                 $ctx->getTrigger()->callEnd($ctx);
             }
             $ctx->close();
+
+            if ($ctx instanceof RootContext) break; // Avoid infinite loop.
+
             $ctx = $ctx->getParent();
         }
     }
@@ -85,6 +88,10 @@ class Context {
             if (preg_match($re, $line)) {
                 $trigger->callEnd($ctx);
                 $ctx = $ctx->getParent();
+
+                if ($ctx instanceof RootContext) {
+                    $this->getFormatter()->newParagraph();
+                }
             } else {
                 if (!preg_match($ctx->getTrigger()->getRegExp($ctx), $line, $matches)) {
                     $matches = NULL;
@@ -92,11 +99,6 @@ class Context {
                 $ctx->getTrigger()->callLine($ctx, $line, $matches);
                 return;
             }
-        }
-
-        // If we have active context that has trigger, do not search through other ones.
-        if ($ctx->getTrigger()) {
-            
         }
 
         foreach (\lib\formatter\WikiFormatter::$lineTriggers as $trigger) {
@@ -112,8 +114,13 @@ class Context {
         } else {
             $this->getRoot()->__isFirstLine = false;
         }
-        
-        $ctx->inlineFormat($line); 
+
+        $this->log("Process '%s' with context %s", $line, get_class($ctx));
+        if (empty($line) && $ctx instanceof RootContext) {
+            $ctx->getFormatter()->newParagraph();
+        } else {
+            $ctx->inlineFormat($line);
+        }
     }
 
     public function inlineFormat($text) {

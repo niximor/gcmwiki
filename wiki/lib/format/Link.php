@@ -86,7 +86,14 @@ class Link extends InlineTrigger {
 
     static function testSuite() {
         self::testFormat("Link na www.google.com a http://www.google.com, stejne tak taky [[www.google.com]] a nebo [[http://www.google.com]] a taky [[www.google.com|s popiskem]].",
-            'Link na <a href="http://www.google.com" class="external">www.google.com</a> a <a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky <a href="http://www.google.com" class="external">www.google.com</a> a nebo <a href="http://www.google.com" class="external">http://www.google.com</a> a taky <a href="http://www.google.com" class="external">s popiskem</a>.');
+<<<EOF
+
+<p>
+Link na <a href="http://www.google.com" class="external">www.google.com</a> a <a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky <a href="http://www.google.com" class="external">www.google.com</a> a nebo <a href="http://www.google.com" class="external">http://www.google.com</a> a taky <a href="http://www.google.com" class="external">s popiskem</a>.
+</p>
+
+EOF
+);
     }
 }
 

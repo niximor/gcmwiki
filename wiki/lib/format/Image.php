@@ -127,7 +127,9 @@ class Image extends InlineTrigger {
 ((/static/logo.png|50%|))
 ((/static/logo.png|right,50%|Image with caption))
 ((/static/logo.png|Image with caption))",
-"<span class=\"image\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
+"
+<p>
+<span class=\"image\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
 \t<img src=\"$url/static/logo.png\" />
 </span></span>
 <span class=\"image\" style=\"display: table; width: 1%\"><span style=\"height: auto; overflow: hidden;\">
@@ -147,6 +149,8 @@ class Image extends InlineTrigger {
 \t\tImage with caption
 \t</span>
 </span></span>
+
+</p>
 ");
     }
 }

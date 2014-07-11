@@ -34,9 +34,51 @@ class BasicFormat extends ExtendedFormat {
     }
 
     static function testSuite() {
-        self::testFormat("Ahoj! **tohle je bold**, __tohle underline__, //tohle italika// a **//__tohle mix__//**",
-            "Ahoj! <strong>tohle je bold</strong>, <ins>tohle underline</ins>, <em>tohle italika</em> a <strong><em><ins>tohle mix</ins></em></strong>");
+        self::testFormat(
+"Ahoj! **tohle je bold**, __tohle underline__, //tohle italika// a **//__tohle mix__//**",
+"
+<p>
+Ahoj! <strong>tohle je bold</strong>, <ins>tohle underline</ins>, <em>tohle italika</em> a <strong><em><ins>tohle mix</ins></em></strong>
+</p>
+");
     }
 }
 
+class LineBreak extends InlineTrigger {
+    function getRegExp(Context $ctx) {
+        return '/\\\\\\\\/';
+    }
 
+    function callback(Context $ctx, $matches) {
+        $ctx->generateHTMLInline("<br />");
+    }
+
+    static function testSuite() {
+        self::testFormat(<<<EOF
+Lorem ipsum dolor \\\\
+sit amet
+
+New paragraph
+
+
+
+Another paragraph
+EOF
+, <<<EOF
+
+<p>
+Lorem ipsum dolor <br />sit amet 
+</p>
+
+<p>
+New paragraph 
+</p>
+
+<p>
+Another paragraph
+</p>
+
+EOF
+);
+    }
+}

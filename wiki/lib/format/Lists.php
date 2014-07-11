@@ -123,7 +123,32 @@ class Lists extends LineTrigger {
     taky je seznam
 - jinyseznam
 taky neni seznam",
-"<ul>\n\t<li>item 1\n\t\t<ul>\n\t\t\t<li>item 1.1\n\t\t\t\t<ul>\n\t\t\t\t\t<li>item 1.1.1</li>\n\t\t\t\t</ul>\n\t\t\t</li>\n\t\t\t<li>item 1.2</li>\n\t\t</ul>\n\t</li>\n\t<li>item 2</li>\n\t<li>item 3</li>\n\t<li>item 4 je seznam taky je seznam</li>\n</ul>\n<ol>\n\t<li>jinyseznam</li>\n</ol>\ntaky neni seznam");
+<<<EOF
+<ul>
+\t<li>item 1
+\t\t<ul>
+\t\t\t<li>item 1.1
+\t\t\t\t<ul>
+\t\t\t\t\t<li>item 1.1.1</li>
+\t\t\t\t</ul>
+\t\t\t</li>
+\t\t\t<li>item 1.2</li>
+\t\t</ul>
+\t</li>
+\t<li>item 2</li>
+\t<li>item 3</li>
+\t<li>item 4 je seznam taky je seznam</li>
+</ul>
+<ol>
+\t<li>jinyseznam</li>
+</ol>
+
+<p>
+taky neni seznam
+</p>
+
+EOF
+);
     }
 }
 
