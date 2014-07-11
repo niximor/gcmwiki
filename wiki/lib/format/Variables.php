@@ -164,7 +164,7 @@ item = {$row}
 var_name exists = {$var_name}
 }}}
 
-{{{ifdef:var_name
+{{{ifdef:another_var
 this should not get printed
 }}}
 
@@ -207,20 +207,25 @@ var_name exists = Row 1 <strong>Row 2</strong> Row 3
 </p>
 
 <p>
-this should get printed 
+this should get printed
 </p>
 
 <p>
 one line
 </p>
+
 <hr />
+
 <p>
 first line second:line with semicolon
 </p>
+
 <hr />
+
 <p>
 array item 1 array item 2 array item 3
 </p>
+
 EOF
 );
     }

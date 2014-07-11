@@ -115,7 +115,6 @@ class Context {
             $this->getRoot()->__isFirstLine = false;
         }
 
-        $this->log("Process '%s' with context %s", $line, get_class($ctx));
         if (empty($line) && $ctx instanceof RootContext) {
             $ctx->getFormatter()->newParagraph();
         } else {

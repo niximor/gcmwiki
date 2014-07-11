@@ -38,7 +38,8 @@ class BasicFormat extends ExtendedFormat {
 "Ahoj! **tohle je bold**, __tohle underline__, //tohle italika// a **//__tohle mix__//**",
 "
 <p>
-Ahoj! <strong>tohle je bold</strong>, <ins>tohle underline</ins>, <em>tohle italika</em> a <strong><em><ins>tohle mix</ins></em></strong>
+Ahoj! <strong>tohle je bold</strong>, <ins>tohle underline</ins>, <em>tohle italika</em> a 
+<strong><em><ins>tohle mix</ins></em></strong>
 </p>
 ");
     }

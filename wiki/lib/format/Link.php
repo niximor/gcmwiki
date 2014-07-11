@@ -89,7 +89,11 @@ class Link extends InlineTrigger {
 <<<EOF
 
 <p>
-Link na <a href="http://www.google.com" class="external">www.google.com</a> a <a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky <a href="http://www.google.com" class="external">www.google.com</a> a nebo <a href="http://www.google.com" class="external">http://www.google.com</a> a taky <a href="http://www.google.com" class="external">s popiskem</a>.
+Link na <a href="http://www.google.com" class="external">www.google.com</a> a 
+<a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky 
+<a href="http://www.google.com" class="external">www.google.com</a> a nebo 
+<a href="http://www.google.com" class="external">http://www.google.com</a> a taky 
+<a href="http://www.google.com" class="external">s popiskem</a>.
 </p>
 
 EOF

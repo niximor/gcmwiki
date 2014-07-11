@@ -75,7 +75,7 @@ class Block extends LineTrigger {
     function callEnd(Context $ctx) {
         if ($ctx->firstline == "") {
             $ctx->generateHTML("\n<pre>");
-            $ctx->generateHTML(htmlspecialchars(implode("\n", $ctx->lines)));
+            $ctx->generate(htmlspecialchars(implode("\n", $ctx->lines)), false);
             $ctx->generateHTML("</pre>\n");
         } else {
             $params = preg_split('/:/', $ctx->firstline);
@@ -85,7 +85,7 @@ class Block extends LineTrigger {
             } else {
                 $ctx->generateHTML("\n<pre>");
                 $ctx->lines = array_merge(array($ctx->firstline), $ctx->lines);
-                $ctx->generate(htmlspecialchars(implode("\n", $ctx->lines)));
+                $ctx->generate(htmlspecialchars(implode("\n", $ctx->lines)), false);
                 $ctx->generateHTML("</pre>\n");
             }
         }
@@ -106,7 +106,8 @@ some c++ code
 <pre>this is raw escaped block</pre>
 
 <p>
-aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa after must get formatted too. 
+aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa 
+after must get formatted too. 
 </p>
 
 <pre>code:c++
