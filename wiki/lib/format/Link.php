@@ -38,6 +38,14 @@ class Link extends InlineTrigger {
         }
     }
 
+    function addLink($ctx, $link) {
+        $root = $ctx->getRoot();
+        if (!isset($root->WIKI_LINKS)) {
+            $root->WIKI_LINKS = array();
+        }
+        $root->WIKI_LINKS[] = $link;
+    }
+
     function callback(Context $ctx, $matches) {
         $pos = strpos($matches[1], "|");
         if ($pos !== false) {
@@ -64,6 +72,8 @@ class Link extends InlineTrigger {
 
                 $ctx->generateHTML('</a>');
                 $generated = true;
+
+                $this->addLink($ctx, $page->getId());
             } catch (\storage\PageNotFoundException $e) {
                 if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
                     $url = "http://".$url;
@@ -72,6 +82,8 @@ class Link extends InlineTrigger {
                     $ctx->generate(htmlspecialchars($text));
                     $ctx->generateHTMLInline('</a>');
                     $generated = true;
+
+                    $this->addLink($ctx, preg_split('|/|', $url));
                 }
             }
         }

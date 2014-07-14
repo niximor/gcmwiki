@@ -12,6 +12,7 @@ class WikiFormatter {
     protected $inParagraph = false;
     protected $startParagraph = true;
     protected $currentLineLength = 0;
+    protected $context;
 
     public $debug = false;
 
@@ -33,6 +34,14 @@ class WikiFormatter {
         }
     }
 
+    public function getRootContext() {
+        if (!is_null($this->context)) {
+            return $this->context->getRoot();
+        } else {
+            return NULL;
+        }
+    }
+
     public function format($text) {
         $this->output = array();
         $this->space = true;
@@ -42,6 +51,8 @@ class WikiFormatter {
 
         $lines = explode("\n", $text);
         $ctx = $root = new format\RootContext($this);
+        $this->context = $root;
+        
         foreach ($lines as $line) {
             $line = preg_replace('/\r$/', '', $line);
             $ctx->formatLine($ctx, $line);
@@ -175,3 +186,85 @@ class WikiFormatter {
     }
 }
 
+class WikiFormatterSimple extends WikiFormatter {
+    function __construct() {
+        require_once "lib/format/Blockquote.php";
+        require_once "lib/format/Line.php";
+        require_once "lib/format/Lists.php";
+        require_once "lib/format/Line.php";
+        require_once "lib/format/Table.php";
+        require_once "lib/format/Block.php";
+
+        require_once "lib/format/BasicFormat.php";
+        require_once "lib/format/Link.php";
+        require_once "lib/format/Image.php";
+
+        $this->installLineTrigger(new format\Blockquote());
+        $this->installLineTrigger(new format\Line());
+        $this->installLineTrigger(new format\Lists());
+        $this->installLineTrigger(new format\Table());
+        $this->installLineTrigger($block = new format\Block());
+
+        $this->installInlineTrigger(format\BasicFormat::Create("**", "strong"));
+        $this->installInlineTrigger(format\BasicFormat::Create("//", "em"));
+        $this->installInlineTrigger(format\BasicFormat::Create("__", "ins"));
+        $this->installInlineTrigger(format\BasicFormat::Create("--", "del"));
+        $this->installInlineTrigger(format\BasicFormat::Create("''", "code"));
+        $this->installInlineTrigger(new format\Link());
+        $this->installInlineTrigger(new format\LinkInText());
+        $this->installInlineTrigger(new format\PlainText());
+        $this->installInlineTrigger(new format\Image());
+        $this->installInlineTrigger(new format\LineBreak());
+    }
+}
+
+class WikiFormatterFull extends WikiFormatter {
+    protected $variables;
+
+    function getVariables() {
+        return $this->variables;
+    }
+
+    function __construct() {
+        require_once "lib/format/Blockquote.php";
+        require_once "lib/format/Line.php";
+        require_once "lib/format/Lists.php";
+        require_once "lib/format/Line.php";
+        require_once "lib/format/Heading.php";
+        require_once "lib/format/Table.php";
+        require_once "lib/format/Block.php";
+
+        require_once "lib/format/BasicFormat.php";
+        require_once "lib/format/Link.php";
+        require_once "lib/format/Image.php";
+        require_once "lib/format/Variables.php";
+
+        $this->installLineTrigger(new format\Blockquote());
+        $this->installLineTrigger($heading = format\Heading::Create(2));
+        $this->installLineTrigger(format\Heading::Create(3));
+        $this->installLineTrigger(format\Heading::Create(4));
+        $this->installLineTrigger(format\Heading::Create(5));
+        $this->installLineTrigger(format\Heading::Create(6));
+        $this->installLineTrigger(new format\Line());
+        $this->installLineTrigger(new format\Lists());
+        $this->installLineTrigger(new format\Table());
+        $this->installLineTrigger($block = new format\Block());
+
+        $this->variables = new format\Variables();
+        $this->variables->register($block);
+
+        $block->registerBlockFormatter("toc", array($heading, "generateToc"));
+
+        $this->installInlineTrigger(format\BasicFormat::Create("**", "strong"));
+        $this->installInlineTrigger(format\BasicFormat::Create("//", "em"));
+        $this->installInlineTrigger(format\BasicFormat::Create("__", "ins"));
+        $this->installInlineTrigger(format\BasicFormat::Create("--", "del"));
+        $this->installInlineTrigger(format\BasicFormat::Create("''", "code"));
+        $this->installInlineTrigger(new format\Link());
+        $this->installInlineTrigger(new format\LinkInText());
+        $this->installInlineTrigger(new format\PlainText());
+        $this->installInlineTrigger(new format\Image());
+        $this->installInlineTrigger(new format\InlineVariable($this->variables));
+        $this->installInlineTrigger(new format\LineBreak());
+    }
+}
