@@ -14,6 +14,7 @@ class Comment extends Model {
 	protected $owner_user_id;
 	protected $edit_user_id;
 	protected $anonymous_name;
+	protected $wiki_page_links = array();
 
 	public $OwnerUser;
 	public $EditUser;
@@ -23,6 +24,12 @@ class Comment extends Model {
 		$this->setText_wiki($text);
 
 		// TODO: Wiki formatting of text
-		$this->setText_html($text);
+		$f = new WikiFormatterSimple();
+		$this->setText_html($f->format($text));
+
+		// Process wiki links
+		if (isset($f->getRootContext()->WIKI_LINKS) && is_array($f->getRootContext()->WIKI_LINKS)) {
+			$this->wiki_page_links = $f->getRootContext()->WIKI_LINKS;
+		}
 	}
 }

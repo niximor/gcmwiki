@@ -123,8 +123,12 @@ class MySQL implements Storage {
         return $parent;
     }
 
-    protected function updatePage(\models\WikiPage $page) {
-        $trans = $this->db->beginRW();
+    protected function updatePage(\models\WikiPage $page, $trans = NULL) {
+        $transactionStarted = false;
+        if (is_null($trans)) {
+            $trans = $this->db->beginRW();
+            $transactionStarted = true;
+        }
 
         $columns = array();
         $values = array();
@@ -156,18 +160,27 @@ class MySQL implements Storage {
             $trans->query("UPDATE wiki_pages SET ".implode(",", $columns)." WHERE id = %s", $values);
         }
 
-        $trans->commit();
+        if ($transactionStarted) {
+            $trans->commit();
+        }
     }
 
-    protected function createPage(\models\WikiPage $page) {
-        $trans = $this->db->beginRW();
+    protected function createPage(\models\WikiPage $page, $trans = NULL) {
+        $transactionStarted = false;
+        if (is_null($trans)) {
+            $trans = $this->db->beginRW();
+            $transactionStarted = true;
+        }
 
         $trans->query("INSERT INTO wiki_pages (name, url, created, last_modified, user_id, body_wiki, body_html, small_change, summary, ip)
                               VALUES          (%s,   %s,  NOW(),   NOW(),         %s,      %s,        %s,        %s,           %s,      %s)",
                 $page->getName(), $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(), $page->getBody_html(),
                 $page->getSmall_change(), $page->getSummary(), \lib\Session::IP());
+        $page->setId($trans->lastInsertId());
 
-        $trans->commit();
+        if ($transactionStarted) {
+            $trans->commit();
+        }
     }
 
     public function storePage(\models\WikiPage $page) {
@@ -192,11 +205,57 @@ class MySQL implements Storage {
             throw $diag;
         }
 
+        $trans = $this->db->beginRW();
+
+        $nameChanged = $page->isChanged("name");
+
         if ($page->getId()) {
-            $this->updatePage($page);
+            $this->updatePage($page, $trans);
         } else {
-            $this->createPage($page);
+            $this->createPage($page, $trans);
         }
+
+        // Store wiki page links
+        $trans->query("DELETE FROM wiki_pages_links WHERE comment_id = %s", $comment->getId());
+
+        $query = "INSERT INTO wiki_pages_links (wiki_page_id, ref_page_id, ref_page_name) VALUES ";
+        $ins = array();
+        $vals = array();
+
+        foreach ($page->wiki_page_links as $link {
+            $ins[] = "(%s, %s, %s)";
+            $vals[] = $page->getId();
+            if (is_int($link)) {
+                $vals[] = $link;
+                $vals[] = NULL;
+            } else {
+                $vals[] = NULL;
+                $vals[] = implode('/', $link);
+            }
+        }
+
+        if (!empty($ins)) {
+            $query .= implode(", ", $ins);
+            $trans->query($query, $vals);
+        }
+
+        // Query for pages that needs changed.
+        if ($nameChanged) {
+            $q = $trans->query("SELECT p.id, p.body_wiki FROM wiki_pages_links pl JOIN wiki_pages p ON (pl.wiki_page_id = p.id) WHERE ref_page_id = %s OR ref_page_name = %s",
+                $page->getId(), $page->getName());
+            $q->setClassFactory("\\models\\WikiPage");
+
+            foreach ($q as $row) {
+                $row->updateBody($row->getBody_wiki());
+                // Update manually to do not create history entry only when changing links.
+                $trans->query("UPDATE wiki_pages SET body_html = %s WHERE id = %s", $row->getId(), $row->getBody_html());
+            }
+        }
+
+        // When creating, convert page names to ids.
+        $trans->query("UPDATE wiki_pages_links SET ref_page_id = %s WHERE ref_page_name = %s", $page->getId(), $page->getName());
+
+        $trans->commit();
     }
 
     function getHistorySummary($pageId) {
@@ -1194,6 +1253,31 @@ class MySQL implements Storage {
                 $comment->page_id, $comment->revision, $comment->owner_user_id, $comment->edit_user_id,
                 $comment->anonymous_name, \lib\Session::IP(), $comment->parent_id, $comment->text_wiki,
                 $comment->text_html);
+            $comment->setId($trans->lastInsertId());
+        }
+
+        // Store wiki page links
+        $trans->query("DELETE FROM comments_links WHERE comment_id = %s", $comment->getId());
+
+        $query = "INSERT INTO comments_links (comment_id, ref_page_id, ref_page_name) VALUES ";
+        $ins = array();
+        $vals = array();
+
+        foreach ($comment->wiki_page_links as $link {
+            $ins[] = "(%s, %s, %s)";
+            $vals[] = $comment->getId();
+            if (is_int($link)) {
+                $vals[] = $link;
+                $vals[] = NULL;
+            } else {
+                $vals[] = NULL;
+                $vals[] = implode('/', $link);
+            }
+        }
+
+        if (!empty($ins)) {
+            $query .= implode(", ", $ins);
+            $trans->query($query, $vals);
         }
 
         $trans->commit();

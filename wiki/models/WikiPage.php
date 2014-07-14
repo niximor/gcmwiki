@@ -20,6 +20,8 @@ class WikiPage extends Model {
 
 	protected $parent;
 
+	protected $wiki_page_links = array();
+
 	public $User;
 
 	public function updateBody($wikiText) {
@@ -27,6 +29,11 @@ class WikiPage extends Model {
 
 		// TODO: Wiki formatting here
 		$this->setBody_html($wikiText);
+
+		// Process wiki links
+		if (isset($f->getRootContext()->WIKI_LINKS) && is_array($f->getRootContext()->WIKI_LINKS)) {
+			$this->wiki_page_links = $f->getRootContext()->WIKI_LINKS;
+		}
 	}
 }
 
