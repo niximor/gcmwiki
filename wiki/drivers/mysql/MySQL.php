@@ -16,6 +16,10 @@ class Config {
 	protected $link;
 	protected $inTransaction = false;
 
+	public static function Copy(Config $other) {
+		return new self($other->host, $other->user, $other->password, $other->database, $other->collate);
+	}
+
 	public function __construct($host, $user, $password, $database, $collate="utf8_general_ci") {
 		$this->host = $host;
 		$this->user = $user;
@@ -231,7 +235,11 @@ class MySQL {
 
 	public function __construct(Config $master, Config $slave=NULL) {
 		$this->master = $master;
-		$this->slave = $slave;
+		if (is_null($slave)) {
+			$this->slave = Config::Copy($master);
+		} else {
+			$this->slave = $slave;
+		}
 	}
 
 	public function beginRW() {
@@ -239,11 +247,7 @@ class MySQL {
 	}
 
 	public function beginRO() {
-		if (!is_null($this->slave)) {
-			return new Transaction($this->slave);
-		} else {
-			return new Transaction($this->master);
-		}
+		return new Transaction($this->slave);
 	}
 }
 
