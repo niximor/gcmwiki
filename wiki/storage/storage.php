@@ -65,6 +65,8 @@ interface Storage {
 	function storePage(\models\WikiPage $page);
 	function getHistorySummary($pageId);
 
+    function getReferencedPages(\models\WikiPage $page);
+
 	function listPageAcl(\models\WikiPage $page);
 	function listPageUsersAcl(\models\WikiPage $page);
 	function listPageGroupsAcl(\models\WikiPage $page);
@@ -99,4 +101,8 @@ interface Storage {
     function storeComment(\models\Comment $comment);
     function loadComments(\models\WikiPage $page);
     function loadComment($commentId);
+    function getReferencedComments(\models\WikiPage $page);
+
+    function invalidateWikiCache($key);
+    function storeWikiCache($key, $text);
 }

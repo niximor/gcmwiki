@@ -3,8 +3,9 @@
 namespace models;
 
 require_once "models/Model.php";
+require_once "lib/Observer.php";
 
-class WikiPage extends Model {
+class WikiPage extends Model implements \lib\Observable {
 	protected $id;
 	protected $name;
 	protected $url;
@@ -24,16 +25,27 @@ class WikiPage extends Model {
 
 	public $User;
 
+	public static $nameChangeObserver;
+
+	public static function init_static() {
+		self::$nameChangeObserver = new \lib\ObserverCollection();
+	}
+
 	public function updateBody($wikiText) {
 		$this->setBody_wiki($wikiText);
+	}
+}
 
-		// TODO: Wiki formatting here
-		$this->setBody_html($wikiText);
+WikiPage::init_static();
 
-		// Process wiki links
-		if (isset($f->getRootContext()->WIKI_LINKS) && is_array($f->getRootContext()->WIKI_LINKS)) {
-			$this->wiki_page_links = $f->getRootContext()->WIKI_LINKS;
+class WikiPageObserver implements \lib\Observer {
+	public function notify(\lib\Observable $object) {
+		$be = \Config::Get("__Backend");
+		foreach ($be->getReferencedPages($object) as $page) {
+			$be->invalidateWikiCache("wiki-page-".$page->wiki_page_id);
 		}
 	}
 }
+
+WikiPage::$nameChangeObserver->registerObserver(new WikiPageObserver());
 

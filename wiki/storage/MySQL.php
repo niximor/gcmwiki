@@ -10,6 +10,7 @@ require_once "models/User.php";
 require_once "models/Group.php";
 require_once "models/SystemPrivilege.php";
 require_once "models/SystemVariable.php";
+require_once "lib/wikiformatter.php";
 
 class MySQL implements Storage {
     protected $db;
@@ -36,6 +37,40 @@ class MySQL implements Storage {
         return new DBSessionStorage($this->db);
     }
 
+    protected function formatPageText(\models\WikiPage $page) {
+        $f = new \lib\formatter\WikiFormatterFull();
+
+        $page->body_html = $f->format($page->body_wiki);
+        $this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
+
+        // TODO: Store page links
+        $root = $f->getRootContext();
+        if (isset($root->WIKI_LINKS) && is_array($root->WIKI_LINKS)) {
+            $query = "INSERT INTO wiki_page_references (wiki_page_id, ref_page_id, ref_page_name) VALUES ";
+            $ins = array();
+            $vals = array();
+
+            foreach ($root->WIKI_LINKS as $link) {
+                $ins[] = "(%s, %s, %s)";
+                $vals[] = $page->getId();
+                if (is_int($link)) {
+                    $vals[] = $link;
+                    $vals[] = NULL;
+                } else {
+                    $vals[] = NULL;
+                    $vals[] = implode("/", $link);
+                }
+            }
+
+            if (!empty($ins)) {
+                $trans = $this->db->beginRW();
+                $query .= implode(", ", $ins);
+                $trans->query($query, $vals);
+                $trans->commit();
+            }
+        }
+    }
+
     public function loadPage($path, $requiredColumns = NULL, $revision = NULL) {
         $trans = $this->db->beginRO();
 
@@ -55,6 +90,15 @@ class MySQL implements Storage {
         for ($i = 0; $i < $part_len; ++$i) {
             $part = $path[$i];
 
+            $loadRenderedBody = false;
+            if (($key = array_search('body_html', $requiredColumns)) !== false) {
+                unset($requiredColumns[$key]);
+                $loadRenderedBody = true;
+                $requiredColumns[] = "body_wiki";
+            }
+
+            $join = array();
+
             if ($i == $part_len - 1) {
                 $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
             } else {
@@ -73,16 +117,24 @@ class MySQL implements Storage {
                 $where = "";
             }
 
+            $join[] = "LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)";
+            $join[] = "LEFT JOIN users u ON (p.user_id = u.id)";
+
+            if ($loadRenderedBody) {
+                $columns[] = "cache.wiki_text AS body_html";
+                $join[] = "LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('wiki-page-', p.id, '-', p.revision) AND cache.valid = 1)";
+            }
+
             if (is_null($parent)) {
-                $res = $trans->query("SELECT ".implode(",", $columns)." FROM ".$table." p
-                    LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)
-                    LEFT JOIN users u ON (p.user_id = u.id)
-                    WHERE url = %s AND ph.parent_id IS NULL".$where, $part);
+                $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                    ".implode(" ", $join)."
+                    WHERE p.url = %s AND ph.parent_id IS NULL".$where;
+                $res = $trans->query($query, $part);
             } else {
-                $res = $trans->query("SELECT ".implode(",", $columns)." FROM ".$table." p
-                    LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)
-                    LEFT JOIN users u ON (p.user_id = u.id)
-                    WHERE url = %s AND ph.parent_id = %s".$where, $part, $parent->id);
+                $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                    ".implode(" ", $join)."
+                    WHERE p.url = %s AND ph.parent_id = %s".$where;
+                $res = $trans->query($query, $part, $parent->id);
             }
 
             try {
@@ -98,7 +150,13 @@ class MySQL implements Storage {
                 if (isset($row->user_id)) $page->user_id = $row->user_id;
                 if (isset($row->revision)) $page->revision = $row->revision;
                 if (isset($row->body_wiki)) $page->body_wiki = $row->body_wiki;
-                if (isset($row->body_html)) $page->body_html = $row->body_html;
+                if ($loadRenderedBody) {
+                    if (is_null($row->body_html)) {
+                        $this->formatPageText($page);
+                    } else {
+                        $page->body_html = $row->body_html;
+                    }
+                }
                 if (isset($row->summary)) $page->summary = $row->summary;
                 if (isset($row->small_change)) $page->small_change = $row->small_change;
 
@@ -141,8 +199,8 @@ class MySQL implements Storage {
         }
 
         if (!empty($columns)) {
-            $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, body_html, user_id, small_change, summary, ip, last_modified, revision)
-                            SELECT                         id,      name, url, body_wiki, body_html, user_id, small_change, summary, ip, last_modified, revision
+            $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision)
+                            SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision
                             FROM wiki_pages WHERE id = %s", $page->getId());
 
             $columns[] = "last_modified = NOW()";
@@ -215,47 +273,24 @@ class MySQL implements Storage {
             $this->createPage($page, $trans);
         }
 
-        // Store wiki page links
-        $trans->query("DELETE FROM wiki_pages_links WHERE comment_id = %s", $comment->getId());
-
-        $query = "INSERT INTO wiki_pages_links (wiki_page_id, ref_page_id, ref_page_name) VALUES ";
-        $ins = array();
-        $vals = array();
-
-        foreach ($page->wiki_page_links as $link {
-            $ins[] = "(%s, %s, %s)";
-            $vals[] = $page->getId();
-            if (is_int($link)) {
-                $vals[] = $link;
-                $vals[] = NULL;
-            } else {
-                $vals[] = NULL;
-                $vals[] = implode('/', $link);
-            }
-        }
-
-        if (!empty($ins)) {
-            $query .= implode(", ", $ins);
-            $trans->query($query, $vals);
-        }
-
-        // Query for pages that needs changed.
-        if ($nameChanged) {
-            $q = $trans->query("SELECT p.id, p.body_wiki FROM wiki_pages_links pl JOIN wiki_pages p ON (pl.wiki_page_id = p.id) WHERE ref_page_id = %s OR ref_page_name = %s",
-                $page->getId(), $page->getName());
-            $q->setClassFactory("\\models\\WikiPage");
-
-            foreach ($q as $row) {
-                $row->updateBody($row->getBody_wiki());
-                // Update manually to do not create history entry only when changing links.
-                $trans->query("UPDATE wiki_pages SET body_html = %s WHERE id = %s", $row->getId(), $row->getBody_html());
-            }
-        }
-
-        // When creating, convert page names to ids.
-        $trans->query("UPDATE wiki_pages_links SET ref_page_id = %s WHERE ref_page_name = %s", $page->getId(), $page->getName());
-
         $trans->commit();
+
+        if ($nameChanged) {
+            \models\WikiPage::$nameChangeObserver->notifyObservers($page);
+        }
+    }
+
+    function getReferencedPages(\models\WikiPage $page) {
+        $trans = $this->db->beginRW();
+        $q = $trans->query("SELECT wiki_page_id FROM wiki_page_references WHERE ref_page_id = %s OR ref_page_name = %s",
+            $page->getId(), $page->getUrl());
+        $out = array();
+        foreach ($q as $row) {
+            $out[] = $row;
+        }
+        $trans->commit();
+
+        return $out;
     }
 
     function getHistorySummary($pageId) {
@@ -1227,8 +1262,8 @@ class MySQL implements Storage {
         }
 
         if (!is_null($comment->getId())) {
-            $trans->query("INSERT INTO comments_history (comment_id, revision, last_modified, user_id,      ip, text_wiki, text_html)
-                            SELECT                       id,         revision, last_modified, edit_user_id, ip, text_wiki, text_html)
+            $trans->query("INSERT INTO comments_history (comment_id, revision, last_modified, user_id,      ip, text_wiki)
+                            SELECT                       id,         revision, last_modified, edit_user_id, ip, text_wiki)
                             FROM comments WHERE id = %s", $comment->getId());
 
             $vals = array();
@@ -1248,50 +1283,59 @@ class MySQL implements Storage {
             $trans->query("UPDATE comments SET ".implode(",", $cols)." WHERE id = %s", $vals);
         } else {
             $trans->query("INSERT INTO comments (page_id, revision, owner_user_id, edit_user_id,
-                anonymous_name, ip, parent_id, created, last_modified, text_wiki, text_html) VALUES
+                anonymous_name, ip, parent_id, created, last_modified, text_wik) VALUES
                 (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)",
                 $comment->page_id, $comment->revision, $comment->owner_user_id, $comment->edit_user_id,
-                $comment->anonymous_name, \lib\Session::IP(), $comment->parent_id, $comment->text_wiki,
-                $comment->text_html);
+                $comment->anonymous_name, \lib\Session::IP(), $comment->parent_id, $comment->text_wiki);
             $comment->setId($trans->lastInsertId());
         }
 
-        // Store wiki page links
-        $trans->query("DELETE FROM comments_links WHERE comment_id = %s", $comment->getId());
+        $trans->commit();
+    }
 
-        $query = "INSERT INTO comments_links (comment_id, ref_page_id, ref_page_name) VALUES ";
-        $ins = array();
-        $vals = array();
+    protected function formatCommentText(\models\Comment $comment) {
+        $f = new \lib\formatter\WikiFormatterSimple();
+        $comment->text_html = $f->format($comment->text_wiki);
+        $this->storeWikiCache("comment-".$comment->id."-".$comment->revision, $comment->text_html);
 
-        foreach ($comment->wiki_page_links as $link {
-            $ins[] = "(%s, %s, %s)";
-            $vals[] = $comment->getId();
-            if (is_int($link)) {
-                $vals[] = $link;
-                $vals[] = NULL;
-            } else {
-                $vals[] = NULL;
-                $vals[] = implode('/', $link);
+        // Store links
+        $root = $f->getRootContext();
+        if (isset($root->WIKI_LINKS) && is_array($root->WIKI_LINKS)) {
+            $query = "INSERT INTO comments_references (comment_id, ref_page_id, ref_page_name) VALUES ";
+            $ins = array();
+            $vals = array();
+
+            foreach ($root->WIKI_LINKS as $link) {
+                $ins[] = "(%s, %s, %s)";
+                $vals[] = $comment->getId();
+                if (is_int($link)) {
+                    $vals[] = $link;
+                    $vals[] = NULL;
+                } else {
+                    $vals[] = NULL;
+                    $vals[] = implode("/", $link);
+                }
+            }
+
+            if (!empty($ins)) {
+                $trans = $this->db->beginRW();
+                $query .= implode(", ", $ins);
+                $trans->query($query, $vals);
+                $trans->commit();
             }
         }
-
-        if (!empty($ins)) {
-            $query .= implode(", ", $ins);
-            $trans->query($query, $vals);
-        }
-
-        $trans->commit();
     }
 
     function loadComments(\models\WikiPage $page) {
         $trans = $this->db->beginRO();
 
         $res = $trans->query("SELECT c.id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
-            c.ip, c.parent_id, c.created, c.last_modified, c.text_html,
+            c.ip, c.parent_id, c.created, c.last_modified, c.text_wiki, cache.wiki_text AS text_html,
             uo.name AS owner_user_name, ue.name AS edit_user_name
             FROM comments c
             LEFT JOIN users uo ON (c.owner_user_id = uo.id)
             LEFT JOIN users ue ON (c.edit_user_id = ue.id)
+            LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('comment-', c.id, '-', c.revision) AND cache.valid = 1)
             WHERE page_id = %s", $page->getId());
 
         // Build comments hierarchy
@@ -1319,7 +1363,12 @@ class MySQL implements Storage {
 
             $comment->created = $row->created;
             $comment->last_modified = $row->last_modified;
-            $comment->text_html = $row->text_html;
+            if (is_null($row->text_html)) {
+                $comment->text_wiki = $row->text_wiki;
+                $this->formatCommentText($comment);
+            } else {
+                $comment->text_html = $row->text_html;
+            }
             $comment->clearChanged();
 
             $comments[$row->parent_id][] = $comment;
@@ -1346,10 +1395,12 @@ class MySQL implements Storage {
         $trans = $this->db->beginRO();
 
         $res = $trans->query("SELECT c.id, c.page_id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
-            c.ip, c.created, c.last_modified, c.text_html, uo.name AS owner_user_name, ue.name AS edit_user_name
+            c.ip, c.created, c.last_modified, c.text_wiki, cache.wiki_text AS text_html,
+            uo.name AS owner_user_name, ue.name AS edit_user_name
             FROM comments c
             LEFT JOIN users uo ON (c.owner_user_id = uo.id)
             LEFT JOIN users ue ON (c.edit_user_id = ue.id)
+            LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('comment-', c.id, '-', c.revision) AND cache.valid = 1)
             WHERE c.id = %s", $commentId);
 
         $row = $res->fetch();
@@ -1371,12 +1422,62 @@ class MySQL implements Storage {
 
         $comment->created = $row->created;
         $comment->last_modified = $row->last_modified;
-        $comment->text_html = $row->text_html;
+        if (is_null($row->text_html)) {
+            $comment->text_wiki = $row->text_wiki;
+            $this->formatCommentText($comment);
+        } else {
+            $comment->text_html = $row->text_html;
+        }
+
         $comment->clearChanged();
 
         $trans->commit();
 
         return $comment;
+    }
+
+    function getReferencedComments(\models\WikiPage $page) {
+        $trans = $this->db->beginRW();
+        $q = $trans->query("SELECT comment_id FROM comments_references WHERE ref_page_id = %s OR ref_page_name = %s",
+            $page->getId(), $page->getUrl());
+        $out = array();
+        foreach ($q as $row) {
+            $out[] = $row;
+        }
+        $trans->commit();
+
+        return $out;
+    }
+
+    function invalidateWikiCache($key, $trans = NULL) {
+        $transactionStarted = false;
+        if (is_null($trans)) {
+            $trans = $this->db->beginRW();
+            $transactionStarted = true;
+        }
+
+        $trans->query("UPDATE wiki_text_cache SET valid = 0 WHERE LEFT(`key`, %s) = %s", strlen($key), $key);
+
+        if ($transactionStarted) {
+            $trans->commit();
+        }
+    }
+
+    function storeWikiCache($key, $text, $trans = NULL) {
+        $transactionStarted = false;
+        if (is_null($trans)) {
+            $trans = $this->db->beginRW();
+            $transactionStarted = true;
+        }
+
+        $trans->query("INSERT INTO wiki_text_cache (`key`, wiki_text)
+                VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE valid = 1, wiki_text = VALUES(wiki_text)",
+            $key, $text);
+
+        if ($transactionStarted) {
+            $trans->commit();
+        }
     }
 }
 

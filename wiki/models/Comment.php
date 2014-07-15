@@ -2,6 +2,9 @@
 
 namespace models;
 
+require_once "models/WikiPage.php";
+require_once "lib/Observer.php";
+
 class Comment extends Model {
 	protected $id;
 	protected $page_id;
@@ -22,14 +25,16 @@ class Comment extends Model {
 
 	public function updateText($text) {
 		$this->setText_wiki($text);
+	}
+}
 
-		// TODO: Wiki formatting of text
-		$f = new WikiFormatterSimple();
-		$this->setText_html($f->format($text));
-
-		// Process wiki links
-		if (isset($f->getRootContext()->WIKI_LINKS) && is_array($f->getRootContext()->WIKI_LINKS)) {
-			$this->wiki_page_links = $f->getRootContext()->WIKI_LINKS;
+class CommentObserver implements \lib\Observer {
+	public function notify(\lib\Observable $object) {
+		$be = \Config::Get("__Backend");
+		foreach ($be->getReferencedComments($object) as $comment) {
+			$be->invalidateWikiCache("comment-".$comment->comment_id);
 		}
 	}
 }
+
+WikiPage::$nameChangeObserver->registerObserver(new CommentObserver());
