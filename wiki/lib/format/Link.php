@@ -73,7 +73,7 @@ class Link extends InlineTrigger {
                 $ctx->generateHTML('</a>');
                 $generated = true;
 
-                $this->addLink($ctx, $page->getId());
+                $this->addLink($ctx, (int)$page->getId());
             } catch (\storage\PageNotFoundException $e) {
                 if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
                     $url = "http://".$url;

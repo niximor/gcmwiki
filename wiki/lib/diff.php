@@ -46,11 +46,11 @@ class Diff {
 		$split1 = $this->split($text1);
 		$split2 = $this->split($text2);
 
-		/*$commonPrefix = $this->commonPrefix($split1, $split2);
+		$commonPrefix = $this->commonPrefix($split1, $split2);
 		$commonSuffix = $this->commonSuffix($split1, $split2);
 
 		$split1 = array_slice($split1, count($commonPrefix), -count($commonSuffix));
-		$split2 = array_slice($split2, count($commonPrefix), -count($commonSuffix));*/
+		$split2 = array_slice($split2, count($commonPrefix), -count($commonSuffix));
 
 		$diff = $this->computeDiff($split1, 0, count($split1), $split2, 0, count($split2));
 		$diff[] = array(count($split1), count($split2), 0);
@@ -63,13 +63,13 @@ class Diff {
 
 		$out = array();
 		if (count($commonPrefix) > 0) {
-			$out += $commonPrefix;
+			$out[] = new DiffTuple(Diff::EQUAL, $commonPrefix);
 		}
 
-		$out += $diff;
+		$out = array_merge($out, $diff);
 
 		if (count($commonSuffix) > 0) {
-			$out += $commonSuffix;
+			$out[] = new DiffTuple(Diff::EQUAL, $commonSuffix);
 		}
 
 		return $out;
@@ -95,8 +95,11 @@ class Diff {
 	protected function commonSuffix(&$text1, &$text2) {
 		$suffix = array();
 
-		for ($i = count($len1) - 1, $j = count($len2) - 1; $i >= 0 && $j >= 0; --$i, --$j) {
-			if ($text1[$i][1] == $text[$j][1]) {
+		$len1 = count($text1);
+		$len2 = count($text2);
+
+		for ($i = $len1 - 1, $j = $len2 - 1; $i >= 0 && $j >= 0; --$i, --$j) {
+			if ($text1[$i][1] == $text2[$j][1]) {
 				$suffix[] = $text1[$i];
 			} else {
 				break;

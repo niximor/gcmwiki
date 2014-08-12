@@ -14,6 +14,7 @@ require_once "lib/wikiformatter.php";
 
 class MySQL implements Storage {
     protected $db;
+    protected $currentTransaction;
 
     public function __construct() {
         $cfgMaster = \Config::Get("MySQLMaster");
@@ -43,7 +44,7 @@ class MySQL implements Storage {
         $page->body_html = $f->format($page->body_wiki);
         $this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
 
-        // TODO: Store page links
+        // Store page links
         $root = $f->getRootContext();
         if (isset($root->WIKI_LINKS) && is_array($root->WIKI_LINKS)) {
             $query = "INSERT INTO wiki_page_references (wiki_page_id, ref_page_id, ref_page_name) VALUES ";
@@ -72,7 +73,13 @@ class MySQL implements Storage {
     }
 
     public function loadPage($path, $requiredColumns = NULL, $revision = NULL) {
-        $trans = $this->db->beginRO();
+        if (is_null($this->currentTransaction)) {
+            $trans = $this->db->beginRO();
+            $transactionStarted = true;
+        } else {
+            $trans = $this->currentTransaction;
+            $transactionStarted = false;
+        }
 
         if (!is_array($path) || count($path) == 0) {
             throw new Exception("You must specify page to load as array of page names.");
@@ -110,6 +117,11 @@ class MySQL implements Storage {
             $columns[] = "u.name AS user_name";
 
             if (!is_null($revision)) {
+                // TODO: Display that we are showing old version of page.
+                // TODO: Support for current revision as parameter (permalink).
+                if (($key = array_search("p.id", $columns)) !== false) {
+                    $columns[$key] = "p.page_id AS id";
+                }
                 $table = "wiki_pages_history";
                 $where = " AND revision = ".$revision;
             } else {
@@ -152,7 +164,9 @@ class MySQL implements Storage {
                 if (isset($row->body_wiki)) $page->body_wiki = $row->body_wiki;
                 if ($loadRenderedBody) {
                     if (is_null($row->body_html)) {
+                        $this->currentTransaction = $trans;
                         $this->formatPageText($page);
+                        $this->currentTransaction = NULL;
                     } else {
                         $page->body_html = $row->body_html;
                     }
@@ -172,12 +186,17 @@ class MySQL implements Storage {
                 $page->setParent($parent);
                 $parent = $page;
             } catch (\drivers\EntryNotFoundException $e) {
-                $trans->commit();
+                if ($transactionStarted) {
+                    $trans->commit();
+                }
                 throw new PageNotFoundException($part, $parent, $e);
             }
         }
 
-        $trans->commit();
+        if ($transactionStarted) {
+            $trans->commit();
+        }
+
         return $parent;
     }
 
@@ -230,9 +249,9 @@ class MySQL implements Storage {
             $transactionStarted = true;
         }
 
-        $trans->query("INSERT INTO wiki_pages (name, url, created, last_modified, user_id, body_wiki, body_html, small_change, summary, ip)
-                              VALUES          (%s,   %s,  NOW(),   NOW(),         %s,      %s,        %s,        %s,           %s,      %s)",
-                $page->getName(), $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(), $page->getBody_html(),
+        $trans->query("INSERT INTO wiki_pages (name, url, created, last_modified, user_id, body_wiki, small_change, summary, ip)
+                              VALUES          (%s,   %s,  NOW(),   NOW(),         %s,      %s,        %s,           %s,      %s)",
+                $page->getName(), $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(),
                 $page->getSmall_change(), $page->getSummary(), \lib\Session::IP());
         $page->setId($trans->lastInsertId());
 
@@ -572,8 +591,8 @@ class MySQL implements Storage {
         $acl->page_read = $user->hasPriv("acl_page_read");
         $acl->page_write = $user->hasPriv("acl_page_write");
         $acl->page_admin = $user->hasPriv("acl_page_admin");
-        $acl->comments_read = $user->hasPriv("acl_comment_read");
-        $acl->comments_write = $user->hasPriv("acl_comment_write");
+        $acl->comment_read = $user->hasPriv("acl_comment_read");
+        $acl->comment_write = $user->hasPriv("acl_comment_write");
         return $acl;
     }
 

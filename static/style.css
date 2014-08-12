@@ -82,6 +82,13 @@ table .history_show { text-align: center; width: 5em; }
 table .history_date { width: 12em; }
 table .history_author { width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+table.diff { font-family: monospace; }
+table.diff .sign { width: 1em; text-align: center; }
+table.diff .ln { width: 2em; text-align: right; }
+table.diff tr.rem td { background-color: #ecb0b0; }
+table.diff tr.add td { background-color: #b0ecb0; }
+table.diff tr.equal td { color: #606060; }
+
 table .acl_name { width: 12em; }
 table .acl { text-align: center; width: 5em; }
 

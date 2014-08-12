@@ -2,18 +2,22 @@
 
 Showing differencies between revision <?php echo $Revision2->revision; ?> and <?php echo $Revision1->revision; ?>.
 
+<table class="diff">
+	<tbody>
 <?php
 	foreach ($Diff as $d) {
 		if ($d->mode == \lib\Diff::EQUAL) {
-			$prefix = "<div>&nbsp;";
+			$prefix = "<tr class=\"equal\"><td class=\"sign\">&nbsp;</td>";
 		} elseif ($d->mode == \lib\Diff::REM) {
-			$prefix = "<div>-";
+			$prefix = "<tr class=\"rem\"><td class=\"sign\">-</td>";
 		} else {
-			$prefix = "<div>+";
+			$prefix = "<tr class=\"add\"><td class=\"sign\">+</td>";
 		}
 
 		foreach ($d->lines as $line) {
-			echo $prefix.$line[0]." ".$line[1]."</div>\n";
+			echo $prefix."<td class=\"ln\">".$line[0]."</td><td class=\"content\">".htmlspecialchars($line[1])."</td></tr>\n";
 		}
 	}
 ?>
+	</tbody>
+</table>

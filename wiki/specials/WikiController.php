@@ -55,6 +55,9 @@ class WikiController extends SpecialController {
 			$child->addVariable("PageName", $e->getMessage());
 			$child->setTitle($e->getMessage());
 
+			$this->relatedPage = new \models\WikiPage();
+			$this->relatedPage->setName($e->getMessage());
+
 			$parent = $e->getParentPage();
 			if (!is_null($parent)) {
 				$this->Acl = $be->loadPageAcl($parent, \lib\CurrentUser::i());
@@ -126,7 +129,7 @@ class WikiController extends SpecialController {
 			if (!is_null($parent)) {
 				$this->Acl = $be->loadPageAcl($e->getParentPage(), \lib\CurrentUser::i());
 			} else {
-				$this->Acl = $be->loadDefaultAcl();
+				$this->Acl = $be->loadDefaultAcl(\lib\CurrentUser::i());
 			}
 
 			$this->relatedPage = new \models\WikiPage();
@@ -269,6 +272,8 @@ class WikiController extends SpecialController {
 
 		$this->addPageLinks();
 		$this->addPageActions();
+		$this->template->addNavigation("History", $this->template->getSelf()."?history");
+		$this->template->addNavigation(sprintf("Changes between revision %d and %d", $rev1->revision, $rev2->revision), $this->template->getSelf()."?diff&a=".$rev1->revision."&b=".$rev2->revision);
 	}
 
 	function acl($path) {

@@ -17,7 +17,7 @@
 		<tbody>
 			<tr>
 				<td class="history_revision"><?php echo $Page->revision; ?></td>
-				<td class="history_diff"><input type="radio" name="a" value="<?php echo $Page->revision; ?>" /></td>
+				<td class="history_diff"><input type="radio" name="a" value="<?php echo $Page->revision; ?>" checked="checked" /></td>
 				<td class="history_diff">&nbsp;</td>
 				<td class="history_show"><a href="<?php echo $this->url($this->getSelf()); ?>">Show</a></td>
 				<td class="history_date"><?php echo $Page->last_modified; ?></td>
@@ -32,7 +32,7 @@
 			<tr>
 				<td class="history_revision"><?php echo $Page->revision; ?></td>
 				<td><?php if ($i < $len - 1) { ?><input type="radio" name="a" value="<?php echo $Page->revision; ?>" /><?php } ?></td>
-				<td><input type="radio" name="b" value="<?php echo $Page->revision; ?>" /></td>
+				<td><input type="radio" name="b" value="<?php echo $Page->revision; ?>"<?php if ($i == 0) echo " checked=\"checked\""; ?> /></td>
 				<td class="history_show"><a href="<?php echo $this->url($this->getSelf()); ?>?revision=<?php echo $Page->revision; ?>">Show</a></td>
 				<td class="history_date"><?php echo $Page->last_modified; ?></td>
 				<td class="history_author"><?php echo $Page->User->profileLink($this); ?></td>
