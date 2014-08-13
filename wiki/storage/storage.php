@@ -59,7 +59,7 @@ class Diagnostics extends Exception {
 
 interface Storage {
     function getSessionStorage();
-	function loadPage($path);
+	function loadPage($path, $requiredColumns = NULL, $revision = NULL);
 	function loadPageAcl(\models\WikiPage $page, \models\User $user);
 	function loadDefaultAcl(\models\User $user);
 	function storePage(\models\WikiPage $page);
