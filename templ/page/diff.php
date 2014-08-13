@@ -1,6 +1,6 @@
 <h1><?php echo $Page->getName(); ?></h1>
 
-Showing differencies between revision <?php echo $Revision2->revision; ?> and <?php echo $Revision1->revision; ?>.
+Showing differencies between revision <?php echo $Revision1->revision; ?> and <?php echo $Revision2->revision; ?>.
 
 <table class="diff">
 	<tbody>
