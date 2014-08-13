@@ -38,7 +38,7 @@ class Link extends InlineTrigger {
         }
     }
 
-    function addLink($ctx, $link) {
+    public static function addLink($ctx, $link) {
         $root = $ctx->getRoot();
         if (!isset($root->WIKI_LINKS)) {
             $root->WIKI_LINKS = array();

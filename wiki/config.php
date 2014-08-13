@@ -26,7 +26,7 @@ class Config {
 		if (isset(self::$specials[$prefix])) {
 			return self::$specials[$prefix];
 		} else {
-			throw new UnknownSpecialPage();
+			throw new view\UnknownSpecialPage();
 		}
 	}
 }

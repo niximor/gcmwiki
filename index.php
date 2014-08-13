@@ -31,22 +31,7 @@ try {
 		}
 	}
 
-	if (isset($special)) {
-		if (count($path) > 0) {
-			$wikiPage = $be->loadPage($path);
-		} else {
-			$wikiPage = NULL;
-		}
-
-		$sp = Config::getSpecial($special);
-		$controller = new $sp($page, $wikiPage);
-
-		if (method_exists($controller, $method)) {
-			call_user_func_array(array($controller, $method), $params);
-		} else {
-			throw new \view\UnknownSpecialPage();
-		}
-	} else {
+	function tryDisplayPage($page, $path) {
 		$method = "page";
 		$keys = array_keys($_GET);
 		if (count($keys) > 0 && empty($_GET[$keys[0]])) {
@@ -59,6 +44,34 @@ try {
 		} else {
 			throw new \view\UnknownSpecialPage();
 		}
+	}
+
+	try {
+		if (isset($special)) {
+			if (count($path) > 0) {
+				$wikiPage = $be->loadPage($path);
+			} else {
+				$wikiPage = NULL;
+			}
+
+			$sp = Config::getSpecial($special);
+		}
+	} catch (\view\UnknownSpecialPage $e) {
+		// Join back special path to page path to allow creation of special pages
+		// that does not have MVC backend.
+		$path[] = sprintf("%s:%s", $special, $method);
+	}
+
+	if (isset($sp)) {
+		$controller = new $sp($page, $wikiPage);
+
+		if (method_exists($controller, $method)) {
+			call_user_func_array(array($controller, $method), $params);
+		} else {
+			throw new \view\UnknownSpecialPage();
+		}
+	} else {
+		tryDisplayPage($page, $path);
 	}
 } catch (\view\UnknownSpecialPage $e) {
 	$child = new \view\Template("no_special.php");
