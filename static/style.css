@@ -60,6 +60,7 @@ form>div.fullwidth>div input:first-of-type { width: 100%; -moz-box-sizing: borde
 form>div.fullwidth>div.nofull { margin-left: 0; }
 form>div.fullwidth>div.nofull input:first-of-type { width: auto; }
 form>div label.fullwidth { float: none; display: block; width: auto; text-align: left; padding-bottom: 0.2em; padding-top: 0; }
+form>div>ul { color: #cc0000; font-weight: bold; padding: 0.5em; padding-left: 1.5em; margin: 0;}
 label.checkbox input { vertical-align: -0.1em; }
 
 table { border-collapse: collapse; width: 100%; }

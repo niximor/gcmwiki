@@ -61,11 +61,12 @@ class CommentsController extends SpecialController {
 				\lib\Session::Set("Errors", $e->getErrorsForFields());
 			}
 
+			// TODO: Redirect to wiki page after adding comment.
 			$this->template->redirect($this->template->getSelf());
 		}
 	
 		$child->addVariable("Page", $this->relatedPage);
-		$child->addVariable("Acl", $acl);
+		$child->addVariable("Acl", $this->Acl);
 		$child->addVariable("Form", (array)\lib\Session::Get("Form"));
 		$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
 		$this->template->setChild($child);

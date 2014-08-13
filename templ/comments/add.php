@@ -19,7 +19,7 @@
 
 	if (!\lib\CurrentUser::isLoggedIn()) {
 ?>
-	<div>
+	<div class="nogrid">
 		<label for="username">User name:</label>
 		<input type="text" name="username" value="<?php if (isset($Form["username"]) && !empty($Form["username"])) echo htmlspecialchars($Form["username"]); ?>" />
 		Note: Your IP address will be logged together with username.
@@ -30,7 +30,7 @@
 ?>
 	<div class="textarea">
 		<label for="text">Text:</label>
-		<textarea name="text"><?php if (isset($Form["text"]) && !empty($Form["text"])) echo htmlspecialchars($Form["text"]); ?></textarea>
+		<div><textarea name="text"><?php if (isset($Form["text"]) && !empty($Form["text"])) echo htmlspecialchars($Form["text"]); ?></textarea></div>
 		<?php if (isset($Errors["text_wiki"])) { echo "<ul>"; foreach ($Errors["text_wiki"] as $err) { echo "<li>".$err->message."</li>"; } echo "</ul>"; } ?>
 	</div>
 

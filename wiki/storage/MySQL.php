@@ -1271,7 +1271,7 @@ class MySQL implements Storage {
         }
 
         // Verify text emptiness
-        if ($comment->text_html == "" || $comment->text_wiki == "") {
+        if ($comment->text_wiki == "") {
             $diag->addError("text_wiki", "text_wiki_cannot_be_empty", "Comment text cannot be empty.");
         }
 
@@ -1302,8 +1302,8 @@ class MySQL implements Storage {
             $trans->query("UPDATE comments SET ".implode(",", $cols)." WHERE id = %s", $vals);
         } else {
             $trans->query("INSERT INTO comments (page_id, revision, owner_user_id, edit_user_id,
-                anonymous_name, ip, parent_id, created, last_modified, text_wik) VALUES
-                (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s)",
+                anonymous_name, ip, parent_id, created, last_modified, text_wiki) VALUES
+                (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s)",
                 $comment->page_id, $comment->revision, $comment->owner_user_id, $comment->edit_user_id,
                 $comment->anonymous_name, \lib\Session::IP(), $comment->parent_id, $comment->text_wiki);
             $comment->setId($trans->lastInsertId());
