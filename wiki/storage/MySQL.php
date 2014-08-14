@@ -93,23 +93,23 @@ class MySQL implements Storage {
 
         $parent = NULL;
 
+        $loadRenderedBody = false;
+        if (($key = array_search('body_html', $requiredColumns)) !== false) {
+            unset($requiredColumns[$key]);
+            $loadRenderedBody = true;
+            $requiredColumns[] = "body_wiki";
+        }
+
         $part_len = count($path);
         for ($i = 0; $i < $part_len; ++$i) {
             $part = $path[$i];
-
-            $loadRenderedBody = false;
-            if (($key = array_search('body_html', $requiredColumns)) !== false) {
-                unset($requiredColumns[$key]);
-                $loadRenderedBody = true;
-                $requiredColumns[] = "body_wiki";
-            }
 
             $join = array();
 
             if ($i == $part_len - 1) {
                 $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
             } else {
-                $columns = array("id");
+                $columns = array("id", "name", "url", "user_id", "ip");
             }
 
             array_walk($columns, function(&$a) { $a = "p.".$a; });
@@ -129,7 +129,6 @@ class MySQL implements Storage {
                 $where = "";
             }
 
-            $join[] = "LEFT JOIN page_hierarchy ph ON (ph.child_id = p.id)";
             $join[] = "LEFT JOIN users u ON (p.user_id = u.id)";
 
             if ($loadRenderedBody) {
@@ -140,12 +139,12 @@ class MySQL implements Storage {
             if (is_null($parent)) {
                 $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
                     ".implode(" ", $join)."
-                    WHERE p.url = %s AND ph.parent_id IS NULL".$where;
+                    WHERE p.url = %s AND p.parent_id IS NULL".$where;
                 $res = $trans->query($query, $part);
             } else {
                 $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
                     ".implode(" ", $join)."
-                    WHERE p.url = %s AND ph.parent_id = %s".$where;
+                    WHERE p.url = %s AND p.parent_id = %s".$where;
                 $res = $trans->query($query, $part, $parent->id);
             }
 
@@ -249,9 +248,13 @@ class MySQL implements Storage {
             $transactionStarted = true;
         }
 
-        $trans->query("INSERT INTO wiki_pages (name, url, created, last_modified, user_id, body_wiki, small_change, summary, ip)
-                              VALUES          (%s,   %s,  NOW(),   NOW(),         %s,      %s,        %s,           %s,      %s)",
-                $page->getName(), $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(),
+        $parentId = NULL;
+
+        if ($page->getParent()) $parentId = $page->getParent()->getId();
+
+        $trans->query("INSERT INTO wiki_pages (name, parent_id, url, created, last_modified, user_id, body_wiki, small_change, summary, ip)
+                              VALUES          (%s,   %s,        %s,  NOW(),   NOW(),         %s,      %s,        %s,           %s,      %s)",
+                $page->getName(), $parentId, $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(),
                 $page->getSmall_change(), $page->getSummary(), \lib\Session::IP());
         $page->setId($trans->lastInsertId());
 
@@ -500,7 +503,7 @@ class MySQL implements Storage {
         $trans->commit();
     }
 
-    public function loadPageAcl(\models\WikiPage $wikiPage, \models\User $user) {
+    public function loadPageAcl(\models\WikiPage $wikiPage, \models\User $user, $trans = NULL) {
         $acl = new \models\WikiAcl;
 
         // Admin has anything, do not need to bother the database.
@@ -514,7 +517,11 @@ class MySQL implements Storage {
             return $acl;
         }
 
-        $trans = $this->db->beginRO();
+        $transactionStarted = false;
+        if (is_null($trans)) {
+            $trans = $this->db->beginRO();
+            $transactionStarted = true;
+        }
 
         $res = $trans->query("SELECT
                 NULL AS user_id,
@@ -568,7 +575,7 @@ class MySQL implements Storage {
             || is_null($acl->comment_write)) 
         {
             if (!is_null($wikiPage->getParent())) {
-                $to_merge = $this->loadPageAcl($wikiPage->getParent(), $user);
+                $to_merge = $this->loadPageAcl($wikiPage->getParent(), $user, $trans);
             } else {
                 // Default ACLs
                 $to_merge = $this->loadDefaultAcl($user, $trans);
@@ -581,7 +588,9 @@ class MySQL implements Storage {
             if (is_null($acl->comment_write)) $acl->comment_write = $to_merge->comment_write;
         }
 
-        $trans->commit();
+        if ($transactionStarted) {
+            $trans->commit();
+        }
 
         return $acl;
     }
