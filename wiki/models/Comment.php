@@ -19,6 +19,8 @@ class Comment extends Model {
 	protected $anonymous_name;
 	protected $wiki_page_links = array();
 
+	protected $page;
+
 	public $OwnerUser;
 	public $EditUser;
 	public $childs; // child comments

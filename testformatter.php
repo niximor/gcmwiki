@@ -18,6 +18,7 @@ use lib\formatter\format;
 <form action="" method="post">
     Wiki text:<br />
     <textarea name="wiki_text" rows="10" cols="50"><?php if (isset($_REQUEST["wiki_text"])) echo htmlspecialchars($_REQUEST["wiki_text"]); ?></textarea><br />
+    Page context: <input type="text" name="page_context" value="<?php if (isset($_REQUEST["page_context"])) echo htmlspecialchars($_REQUEST["page_context"]); ?>" /><br />
     <input type="submit" />
 </form>
 
@@ -25,6 +26,15 @@ use lib\formatter\format;
 
 if (!isset($_REQUEST["wiki_text"])) {
     $_REQUEST["wiki_text"] = "";
+}
+
+$page = NULL;
+if (isset($_REQUEST["page_context"]) && !empty($_REQUEST["page_context"])) {
+    $be = Config::Get("__Backend");
+    try {
+        $page = $be->loadPage(preg_split("|/|", $_REQUEST["page_context"]));
+    } catch (\storage\PageNotFoundException $e) {
+    }
 }
 
 echo "Debug:";
@@ -43,7 +53,7 @@ format\InlineVariable::testSuite($f);
 format\LineBreak::testSuite($f);
 
 $f->debug = true;
-$out = $f->format($_REQUEST["wiki_text"]);
+$out = $f->format($_REQUEST["wiki_text"], $page);
 echo "</pre>";
 
 echo "Formatted:";

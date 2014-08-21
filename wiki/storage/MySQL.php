@@ -41,7 +41,7 @@ class MySQL implements Storage {
     protected function formatPageText(\models\WikiPage $page) {
         $f = new \lib\formatter\WikiFormatterFull();
 
-        $page->body_html = $f->format($page->body_wiki);
+        $page->body_html = $f->format($page->body_wiki, $page);
         $this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
 
         // Store page links
@@ -1323,7 +1323,7 @@ class MySQL implements Storage {
 
     protected function formatCommentText(\models\Comment $comment) {
         $f = new \lib\formatter\WikiFormatterSimple();
-        $comment->text_html = $f->format($comment->text_wiki);
+        $comment->text_html = $f->format($comment->text_wiki, $comment->getPage());
         $this->storeWikiCache("comment-".$comment->id."-".$comment->revision, $comment->text_html);
 
         // Store links
@@ -1376,6 +1376,7 @@ class MySQL implements Storage {
             }
 
             $comment = new \models\Comment;
+            $comment->setPage($page);
             $comment->id = $row->id;
             $comment->revision = $row->revision;
 

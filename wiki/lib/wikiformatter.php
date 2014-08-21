@@ -42,7 +42,7 @@ class WikiFormatter {
         }
     }
 
-    public function format($text) {
+    public function format($text, \models\WikiPage $pageContext = NULL) {
         $this->output = array();
         $this->space = true;
         $this->inParagraph = false;
@@ -52,6 +52,7 @@ class WikiFormatter {
         $lines = explode("\n", $text);
         $ctx = $root = new format\RootContext($this);
         $this->context = $root;
+        $this->context->setPage($pageContext);
         
         foreach ($lines as $line) {
             $line = preg_replace('/\r$/', '', $line);

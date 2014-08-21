@@ -215,6 +215,7 @@ class CapturingContext extends Context {
 
 class RootContext extends Context {
     protected $__isFirstLine = true;
+    protected $page;
 
     function __construct(\lib\formatter\WikiFormatter $formatter) {
         $this->formatter = $formatter;
@@ -243,6 +244,14 @@ class RootContext extends Context {
 
     function generate($text) {
         $this->getFormatter()->generate($text);
+    }
+
+    function getPage() {
+        return $this->page;
+    }
+
+    function setPage(\models\WikiPage $page = NULL) {
+        $this->page = $page;
     }
 }
 

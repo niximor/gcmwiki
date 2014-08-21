@@ -34,6 +34,15 @@ class WikiPage extends Model implements \lib\Observable {
 	public function updateBody($wikiText) {
 		$this->setBody_wiki($wikiText);
 	}
+
+	public function getPath() {
+		if (!is_null($this->parent)) {
+			$path = array_merge($this->parent->getPath(), array($this->url));
+		} else {
+			$path = array($this->url);
+		}
+		return $path;
+	}
 }
 
 WikiPage::init_static();

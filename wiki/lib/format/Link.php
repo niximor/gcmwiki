@@ -58,15 +58,54 @@ class Link extends InlineTrigger {
         $generated = false;
         if (!preg_match('/[a-zA-Z][a-zA-Z0-9]:\/\//', $url)) {
             $be = \Config::Get("__Backend");
+
+            $pathParts = preg_split('|/|', ($url[0] == "/")?substr($url, 1):$url);
+
+            // Pages are searched from current level.
+            if ($url[0] != "/") {
+                $contextPage = $ctx->getRoot()->getPage();
+                if (!is_null($contextPage)) {
+                    $currentPagePath = $contextPage->getPath();
+                    // By default, links without / are on the same level
+                    // as current page, so we need to split current page
+                    // name from currentPagePath. That, in fact, creates
+                    // parentPagePath.
+                    $ctx->log("Got current page %s", implode("/", $currentPagePath));
+                    $currentPagePath = array_splice($currentPagePath, 0, -1);
+                    $ctx->log("Got parent page %s", implode("/", $currentPagePath));
+                } else {
+                    $ctx->log("Don't have current page");
+                    $currentPagePath = array();
+                }
+
+                $fullPageUrl = array_merge($currentPagePath, $pathParts);
+            } else {
+                $fullPageUrl = $pathParts;
+            }
+
             try {
-                $page = $be->loadPage(preg_split('|/|', $url));
+                // If URL contains slash, pages are searched from root.
+                $page = $be->loadPage($fullPageUrl);
+
+                if ($text == $url) $text = NULL;
+
+                $url = implode("/", $fullPageUrl);
+
+                $root = dirname($_SERVER["SCRIPT_NAME"]);
+                if ($url[0] == "/") {
+                    $url = $root.$url;
+                } else {
+                    $url = $root."/".$url;
+                }
 
                 $ctx->generateHTMLInline(sprintf('<a href="%s" class="page">', htmlspecialchars($url)));
 
-                if ($text != $url) {
+                if (!is_null($text)) {
                     $newctx = new LinkContext($ctx);
                     $newctx->inlineFormat($text);
+                    $ctx->log("Name passed in format string.");
                 } else {
+                    $ctx->log("Get name of link from page name.");
                     $ctx->generate(htmlspecialchars($page->getName()));
                 }
 
@@ -78,6 +117,20 @@ class Link extends InlineTrigger {
                 if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
                     $url = "http://".$url;
                 } else {
+                    $root = dirname($_SERVER["SCRIPT_NAME"]);
+
+                    if ($text == $url) {
+                        $text = $pathParts[count($pathParts) - 1];
+                    }
+
+                    $url = implode("/", $fullPageUrl);
+
+                    if ($url[0] == "/") {
+                        $url = $root.$url;
+                    } else {
+                        $url = $root."/".$url;
+                    }
+
                     $ctx->generateHTMLInline(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($url)));
                     $ctx->generate(htmlspecialchars($text));
                     $ctx->generateHTMLInline('</a>');
