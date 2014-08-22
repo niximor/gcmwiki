@@ -43,6 +43,10 @@ class WikiPage extends Model implements \lib\Observable {
 		}
 		return $path;
 	}
+
+	public function getFullUrl() {
+		return implode("/", $this->getPath());
+	}
 }
 
 WikiPage::init_static();

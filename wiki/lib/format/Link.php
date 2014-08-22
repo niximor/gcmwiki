@@ -70,11 +70,8 @@ class Link extends InlineTrigger {
                     // as current page, so we need to split current page
                     // name from currentPagePath. That, in fact, creates
                     // parentPagePath.
-                    $ctx->log("Got current page %s", implode("/", $currentPagePath));
                     $currentPagePath = array_splice($currentPagePath, 0, -1);
-                    $ctx->log("Got parent page %s", implode("/", $currentPagePath));
                 } else {
-                    $ctx->log("Don't have current page");
                     $currentPagePath = array();
                 }
 

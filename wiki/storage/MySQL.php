@@ -93,13 +93,6 @@ class MySQL implements Storage {
 
         $parent = NULL;
 
-        $loadRenderedBody = false;
-        if (($key = array_search('body_html', $requiredColumns)) !== false) {
-            unset($requiredColumns[$key]);
-            $loadRenderedBody = true;
-            $requiredColumns[] = "body_wiki";
-        }
-
         $part_len = count($path);
         for ($i = 0; $i < $part_len; ++$i) {
             $part = $path[$i];
@@ -110,6 +103,13 @@ class MySQL implements Storage {
                 $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
             } else {
                 $columns = array("id", "name", "url", "user_id", "ip");
+            }
+
+            $loadRenderedBody = false;
+            if (($key = array_search('body_html', $columns)) !== false) {
+                unset($columns[$key]);
+                $loadRenderedBody = true;
+                $columns[] = "body_wiki";
             }
 
             array_walk($columns, function(&$a) { $a = "p.".$a; });
@@ -152,6 +152,7 @@ class MySQL implements Storage {
                 $row = $res->fetch();
 
                 $page = new \models\WikiPage;
+                $page->setParent($parent);
 
                 if (isset($row->id)) $page->id = $row->id;
                 if (isset($row->name)) $page->name = $row->name;
@@ -182,7 +183,6 @@ class MySQL implements Storage {
                     $page->User->ip = $row->ip;
                 }
 
-                $page->setParent($parent);
                 $parent = $page;
             } catch (\drivers\EntryNotFoundException $e) {
                 if ($transactionStarted) {

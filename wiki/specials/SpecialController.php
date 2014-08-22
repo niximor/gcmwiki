@@ -17,13 +17,13 @@ class SpecialController {
 
     function addPageActions() {
 		if ($this->Acl->page_write) {
-			$this->template->addAction("Edit", $this->relatedPage->getUrl()."?edit");
+			$this->template->addAction("Edit", $this->relatedPage->getFullUrl()."?edit");
 		}
 
-		$this->template->addAction("History", $this->relatedPage->getUrl()."?history");
+		$this->template->addAction("History", $this->relatedPage->getFullUrl()."?history");
 
 		if ($this->Acl->page_admin) {
-			$this->template->addAction("ACLs", $this->relatedPage->getUrl()."?acl");
+			$this->template->addAction("ACLs", $this->relatedPage->getFullUrl()."?acl");
 		}
 	}
 
