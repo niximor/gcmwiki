@@ -42,7 +42,7 @@ class MySQL implements Storage {
         $f = new \lib\formatter\WikiFormatterFull();
 
         $page->body_html = $f->format($page->body_wiki, $page);
-        //$this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
+        $this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
 
         // Store page links
         $root = $f->getRootContext();
@@ -331,6 +331,8 @@ class MySQL implements Storage {
         if ($nameChanged) {
             \models\WikiPage::$nameChangeObserver->notifyObservers($page);
         }
+
+        \models\WikiPage::$pageChangeObserver->notifyObservers($page);
     }
 
     function getReferencedPages(\models\WikiPage $page) {

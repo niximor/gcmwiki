@@ -22,7 +22,7 @@ class Category {
         switch ($mode) {
             case "simple":
                 foreach ($subpages as $child) {
-                    $toFormat[] = "* [[".$child->getUrl()."]]";
+                    $toFormat[] = "* [[".$page->getUrl()."/".$child->getUrl()."]]";
                 }
                 break;
 
@@ -43,7 +43,7 @@ class Category {
                 foreach ($letters as $letter=>$pages) {
                     $toFormat[] = "== ".$letter." ==";
                     foreach ($pages as $child) {
-                        $toFormat[] = "* [[".$child->getUrl()."]]";
+                        $toFormat[] = "* [[".$page->getUrl()."/".$child->getUrl()."]]";
                     }
                 }
                 break;
@@ -54,3 +54,15 @@ class Category {
     }
 }
 
+class CategoryChangeObserver implements \lib\Observer {
+    public function notify(\lib\Observable $page) {
+        $parent = $page->getParent();
+
+        if (!is_null($parent)) {
+            $be = \Config::Get("__Backend");
+            $be->invalidateWikiCache("wiki-page-".$parent->getId());
+        }
+    }
+}
+
+\models\WikiPage::$pageChangeObserver->registerObserver(new CategoryChangeObserver());

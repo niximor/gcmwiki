@@ -10,7 +10,7 @@ interface Observer {
 }
 
 class ObserverCollection {
-    protected $observers;
+    protected $observers = array();
 
     public function registerObserver(Observer $observer) {
         $this->observers[] = $observer;

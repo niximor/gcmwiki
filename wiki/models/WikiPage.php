@@ -26,9 +26,11 @@ class WikiPage extends Model implements \lib\Observable {
 	public $User;
 
 	public static $nameChangeObserver;
+	public static $pageChangeObserver;
 
 	public static function init_static() {
 		self::$nameChangeObserver = new \lib\ObserverCollection();
+		self::$pageChangeObserver = new \lib\ObserverCollection();
 	}
 
 	public function updateBody($wikiText) {
@@ -61,4 +63,7 @@ class WikiPageObserver implements \lib\Observer {
 }
 
 WikiPage::$nameChangeObserver->registerObserver(new WikiPageObserver());
+
+// FIXME: This is ugly hack to allow registering pageChangeObserver.
+require_once "lib/format/Category.php";
 
