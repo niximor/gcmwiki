@@ -235,6 +235,7 @@ class WikiFormatterFull extends WikiFormatterSimple {
         require_once "lib/format/Block.php";
         require_once "lib/format/Variables.php";
         require_once "lib/format/Template.php";
+        require_once "lib/format/Category.php";
 
         $this->installLineTrigger($heading = format\Heading::Create(2));
         $this->installLineTrigger(format\Heading::Create(3));
@@ -246,6 +247,9 @@ class WikiFormatterFull extends WikiFormatterSimple {
         $this->variables->register($this->blockFormatter);
 
         $this->blockFormatter->registerBlockFormatter("toc", array($heading, "generateToc"));
+
+        $category = new format\Category();
+        $category->register($this->blockFormatter);
 
         $tmpl = new format\Template();
         $tmpl->register($this->blockFormatter);

@@ -42,7 +42,7 @@ class MySQL implements Storage {
         $f = new \lib\formatter\WikiFormatterFull();
 
         $page->body_html = $f->format($page->body_wiki, $page);
-        $this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
+        //$this->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
 
         // Store page links
         $root = $f->getRootContext();
@@ -199,6 +199,37 @@ class MySQL implements Storage {
         return $parent;
     }
 
+    function listSubpages(\models\WikiPage $page = NULL, $requiredColumns = NULL) {
+        if (is_null($requiredColumns)) $requiredColumns = array();
+        $columns = array_merge($requiredColumns, array("id", "url", "name"));
+
+        $transactionStarted = false;
+        if ($this->currentTransaction) {
+            $trans = $this->currentTransaction;
+        } else {
+            $trans = $this->db->beginRO();
+            $transactionStarted = true;
+        }
+
+        if (!is_null($page)) {
+            $res = $trans->query("SELECT ".implode(",", $columns)." FROM wiki_pages WHERE parent_id = %s ORDER BY name ASC", $page->getId());
+        } else {
+            $res = $trans->query("SELECT ".implode(",", $columns)." FROM wiki_pages WHERE parent_id IS NULL ORDER BY name ASC");
+        }
+        $res->setClassFactory("\\models\\WikiPage");
+
+        $out = array();
+        foreach ($res as $row) {
+            $out[] = $row;
+        }
+
+        if ($transactionStarted) {
+            $trans->commit();
+        }
+
+        return $out;
+    }
+
     protected function updatePage(\models\WikiPage $page, $trans = NULL) {
         $transactionStarted = false;
         if (is_null($trans)) {
@@ -315,7 +346,7 @@ class MySQL implements Storage {
         return $out;
     }
 
-    function getHistorySummary($pageId) {
+    function getHistorySummary(\models\WikiPage $page) {
         $trans = $this->db->beginRO();
 
         $res = $trans->query("SELECT h.id, h.revision, h.last_modified, h.user_id, h.small_change, h.summary,
@@ -323,7 +354,7 @@ class MySQL implements Storage {
             FROM wiki_pages_history h
             LEFT JOIN users u ON (h.user_id = u.id)
             WHERE page_id = %s
-            ORDER BY revision DESC", $pageId);
+            ORDER BY revision DESC", $page->getId());
 
         $result = array();
         foreach ($res as $row) {

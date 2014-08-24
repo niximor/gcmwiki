@@ -169,7 +169,7 @@ class WikiController extends SpecialController {
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_read) {
-				$summary = $be->getHistorySummary($this->relatedPage->getId());
+				$summary = $be->getHistorySummary($this->relatedPage);
 
 				$child = new \view\Template("page/history.php");
 
