@@ -72,7 +72,7 @@ class MySQL implements Storage {
         }
     }
 
-    public function loadPage($path, $requiredColumns = NULL, $revision = NULL) {
+    public function loadPage($path, $requiredColumns = NULL, $revision = NULL, $followRedirect = true) {
         if (is_null($this->currentTransaction)) {
             $trans = $this->db->beginRO();
             $transactionStarted = true;
@@ -104,6 +104,7 @@ class MySQL implements Storage {
             } else {
                 $columns = array("id", "name", "url", "user_id", "ip");
             }
+            $columns[] = "redirect_to";
 
             $loadRenderedBody = false;
             if (($key = array_search('body_html', $columns)) !== false) {
@@ -136,16 +137,30 @@ class MySQL implements Storage {
                 $join[] = "LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('wiki-page-', p.id, '-', p.revision) AND cache.valid = 1)";
             }
 
-            if (is_null($parent)) {
-                $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                    ".implode(" ", $join)."
-                    WHERE p.url = %s AND p.parent_id IS NULL".$where;
-                $res = $trans->query($query, $part);
+            if ($followRedirect) {
+                if (is_null($parent)) {
+                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                        ".implode(" ", $join)."
+                        WHERE p.id = GET_PAGE_ID(%s, NULL)".$where;
+                    $res = $trans->query($query, $part);
+                } else {
+                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                        ".implode(" ", $join)."
+                        WHERE p.id = GET_PAGE_ID(%s, %s)".$where;
+                    $res = $trans->query($query, $part, $parent->id);
+                }
             } else {
-                $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                    ".implode(" ", $join)."
-                    WHERE p.url = %s AND p.parent_id = %s".$where;
-                $res = $trans->query($query, $part, $parent->id);
+                if (is_null($parent)) {
+                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                        ".implode(" ", $join)."
+                        WHERE p.url = %s AND p.parent_id IS NULL".$where;
+                    $res = $trans->query($query, $part);
+                } else {
+                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+                        ".implode(" ", $join)."
+                        WHERE p.url = %s AND p.parent_id = %s".$where;
+                    $res = $trans->query($query, $part, $parent->id);
+                }
             }
 
             try {
@@ -173,6 +188,12 @@ class MySQL implements Storage {
                 }
                 if (isset($row->summary)) $page->summary = $row->summary;
                 if (isset($row->small_change)) $page->small_change = $row->small_change;
+
+                if ($row->url != $part) {
+                    $this->currentTransaction = $trans;
+                    $page->redirected_from = $this->loadPage($path, NULL, NULL, false);
+                    $this->currentTransaction = NULL;
+                }
 
                 if ($page->user_id > 0) {
                     $page->User = new \models\User;
@@ -240,10 +261,14 @@ class MySQL implements Storage {
         $columns = array();
         $values = array();
 
+        $urlChanged = false;
+
         foreach ($page->listChanged() as $column) {
             if (in_array($column, array("name", "url", "body_wiki", "body_html", "user_id", "small_change", "summary"))) {
                 $columns[] = $column." = %s";
                 $values[] = $page->$column;
+
+                if ($column == "url") $urlChanged = true;
             }
         }
 
@@ -928,7 +953,13 @@ class MySQL implements Storage {
     }
 
     public function loadUserPrivileges(\models\User $user) {
-        $trans = $this->db->beginRO();
+        $transactionStarted = false;
+        if (is_null($this->currentTransaction)) {
+            $trans = $this->db->beginRO();
+            $transactionStarted = true;
+        } else {
+            $trans = $this->currentTransaction;
+        }
 
         $res = $trans->query("SELECT
                     sp.id,
@@ -982,7 +1013,9 @@ class MySQL implements Storage {
             $map[$row->name] = $priv;
         }
 
-        $trans->commit();
+        if ($transactionStarted) {
+            $trans->commit();
+        }
 
         return $map;
     }

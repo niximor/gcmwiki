@@ -79,7 +79,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path, array("body_wiki"));
+			$this->relatedPage = $be->loadPage($path, array("body_wiki"), NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 		} catch (\storage\PageNotFoundException $e) {
 			$parent = $e->getParentPage();
@@ -122,7 +122,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path);
+			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 		} catch (\storage\PageNotFoundException $e) {
 			$parent = $e->getParentPage();
@@ -165,7 +165,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path);
+			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_read) {
@@ -221,17 +221,17 @@ class WikiController extends SpecialController {
 
 		try {
 			// Load revisions from DB
-			$this->relatedPage = $be->loadPage($path, array("body_wiki", "revision"));
+			$this->relatedPage = $be->loadPage($path, array("body_wiki", "revision"), NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_read) {
 				if ($this->relatedPage->getRevision() != $rev1) {
-					$rev1 = $be->loadPage($path, array("body_wiki", "revision"), $rev1);
+					$rev1 = $be->loadPage($path, array("body_wiki", "revision"), $rev1, false);
 				} else {
 					$rev1 = $this->relatedPage;
 				}
 				if ($this->relatedPage->getRevision() != $rev2) {
-					$rev2 = $be->loadPage($path, array("body_wiki", "revision"), $rev2);
+					$rev2 = $be->loadPage($path, array("body_wiki", "revision"), $rev2, false);
 				} else {
 					$rev2 = $this->relatedPage;
 				}
@@ -280,7 +280,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path);
+			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_admin) {
@@ -325,7 +325,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path);
+			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_admin) {

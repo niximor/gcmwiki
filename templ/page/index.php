@@ -1,5 +1,11 @@
 <h1><?php echo htmlspecialchars($Page->getName()); ?></h1>
 
+<?php
+    if ($Page->redirected_from) {
+        echo "<em>Redirected from <a href=\"".htmlspecialchars($this->url(implode("/", $Page->redirected_from->getPath())))."?edit\">".htmlspecialchars($Page->redirected_from->getName())."</a>.</em>";
+    }
+?>
+
 <div class="wiki">
 	<?php echo $Page->getBody_html(); ?>
 </div>

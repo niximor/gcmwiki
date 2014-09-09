@@ -74,12 +74,13 @@ interface Storage {
      * @param array(string) $requiredColumns List of columns that should be loaded. By default, columns loaded are:
      *   id, url, name, revision, last_modified, user_id, ip. If you need anything else, you must specify it in this
      *   parameter.
+     * @param bool $followRedirect Set to true to automatically follow redirect of pages.
      * @return \models\WikiPage instance of loaded page.
      * @throws \storage\PageNotFoundException if given page was not found. Exception's message contains name of page
      *   that was not found. It does not need to be the actual page requested, but anything in the path before actual
      *   page, if that parent page does not exists.
      */
-	function loadPage($path, $requiredColumns = NULL, $revision = NULL);
+	function loadPage($path, $requiredColumns = NULL, $revision = NULL, $followRedirect = true);
 
     /**
      * List subpages of given page. Only direct subpages are listed.

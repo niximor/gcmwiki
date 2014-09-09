@@ -20,6 +20,7 @@ class WikiPage extends Model implements \lib\Observable {
 	protected $small_change;
 
 	protected $parent;
+	protected $redirected_from = NULL;
 
 	protected $wiki_page_links = array();
 
