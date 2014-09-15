@@ -236,6 +236,7 @@ class WikiFormatterFull extends WikiFormatterSimple {
         require_once "lib/format/Variables.php";
         require_once "lib/format/Template.php";
         require_once "lib/format/Category.php";
+        require_once "lib/format/Redirect.php";
 
         $this->installLineTrigger($heading = format\Heading::Create(2));
         $this->installLineTrigger(format\Heading::Create(3));
@@ -253,6 +254,9 @@ class WikiFormatterFull extends WikiFormatterSimple {
 
         $tmpl = new format\Template();
         $tmpl->register($this->blockFormatter);
+
+        $redirect = new format\Redirect();
+        $redirect->register($this->blockFormatter);
 
         $this->installInlineTrigger(new format\InlineVariable($this->variables));
     }

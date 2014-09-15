@@ -4,7 +4,7 @@ require_once "wiki/wiki.php";
 require_once "wiki/view/Template.php";
 
 // Parse URL and load apropriate wiki pages
-$path = preg_split("#/+#", preg_replace('#^/|/$#', '', $_SERVER["PATH_INFO"]));
+$path = preg_split("#/+#", preg_replace('#^/|/$#', '', str_replace("+", " ", $_SERVER["PATH_INFO"])));
 if (!empty($path) && empty($path[0])) $path = array();
 
 $be = Config::Get("__Backend");

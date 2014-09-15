@@ -114,6 +114,14 @@ interface Storage {
 	function storePage(\models\WikiPage $page);
 
     /**
+     * Changes redirects from old page to new page. All pages redirecting to $oldPage gets redirected to
+     * $newPage.
+     * @param \models\WikiPage $oldPage Old page
+     * @param \models\WikiPage $newPage New page
+     */
+    function updateRedirects(\models\WikiPage $oldPage, \models\WikiPage $newPage);
+
+    /**
      * Gets overview of page history - list of revisions with revision comments.
      * @param \models\WikiPage $page WikiPage to get history.
      */

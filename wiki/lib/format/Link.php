@@ -82,7 +82,7 @@ class Link extends InlineTrigger {
 
             try {
                 // If URL contains slash, pages are searched from root.
-                $page = $be->loadPage($fullPageUrl);
+                $page = $be->loadPage($fullPageUrl, NULL, NULL, false);
 
                 if ($text == $url) $text = NULL;
 

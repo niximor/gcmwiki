@@ -64,10 +64,19 @@ class MySQL implements Storage {
             }
 
             if (!empty($ins)) {
-                $trans = $this->db->beginRW();
+                $transactionStarted = false;
+                if ($this->currentTransaction) {
+                    $trans = $this->currentTransaction;
+                } else {
+                    $trans = $this->db->beginRW();
+                    $transactionStarted = true;
+                }
                 $query .= implode(", ", $ins);
                 $trans->query($query, $vals);
-                $trans->commit();
+
+                if ($transactionStarted) {
+                    $trans->commit();
+                }
             }
         }
     }
@@ -188,8 +197,9 @@ class MySQL implements Storage {
                 }
                 if (isset($row->summary)) $page->summary = $row->summary;
                 if (isset($row->small_change)) $page->small_change = $row->small_change;
+                if (isset($row->redirect_to)) $page->redirect_to = $row->redirect_to;
 
-                if ($row->url != $part) {
+                if (strtolower($row->url) != strtolower($part)) {
                     $this->currentTransaction = $trans;
                     $page->redirected_from = $this->loadPage($path, NULL, NULL, false);
                     $this->currentTransaction = NULL;
@@ -262,39 +272,52 @@ class MySQL implements Storage {
         $values = array();
 
         $urlChanged = false;
+        $incRevision = false;
 
         foreach ($page->listChanged() as $column) {
-            if (in_array($column, array("name", "url", "body_wiki", "body_html", "user_id", "small_change", "summary"))) {
+            if (in_array($column, array("name", "url", "body_wiki", "user_id", "small_change", "summary", "redirect_to"))) {
                 $columns[] = $column." = %s";
                 $values[] = $page->$column;
+
+                if ($column == "body_wiki" || $column == "url" || $column == "name") {
+                    $incRevision = true;
+                }
 
                 if ($column == "url") $urlChanged = true;
             }
         }
 
         if (!empty($columns)) {
-            $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision)
-                            SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision
-                            FROM wiki_pages WHERE id = %s", $page->getId());
+            if ($incRevision) {
+                $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision)
+                                SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision
+                                FROM wiki_pages WHERE id = %s", $page->getId());
 
-            $columns[] = "last_modified = NOW()";
+                $columns[] = "last_modified = NOW()";
 
-            $columns[] = "user_id = %s";
-            $values[] = \lib\CurrentUser::ID();
+                $columns[] = "user_id = %s";
+                $values[] = \lib\CurrentUser::ID();
 
-            $columns[] = "ip = %s";
-            $values[] = \lib\Session::IP();
+                $columns[] = "ip = %s";
+                $values[] = \lib\Session::IP();
 
-            $columns[] = "revision = revision + 1";
+                $columns[] = "revision = revision + 1";
+            }
 
             $values[] = $page->getId();
 
             $trans->query("UPDATE wiki_pages SET ".implode(",", $columns)." WHERE id = %s", $values);
+
+            if ($incRevision) {
+                $page->setRevision($page->getRevision() + 1);
+            }
         }
 
         if ($transactionStarted) {
             $trans->commit();
         }
+
+        $page->clearChanged();
     }
 
     protected function createPage(\models\WikiPage $page, $trans = NULL) {
@@ -313,10 +336,13 @@ class MySQL implements Storage {
                 $page->getName(), $parentId, $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(),
                 $page->getSmall_change(), $page->getSummary(), \lib\Session::IP());
         $page->setId($trans->lastInsertId());
+        $page->setRevision(1);
 
         if ($transactionStarted) {
             $trans->commit();
         }
+
+        $page->clearChanged();
     }
 
     public function storePage(\models\WikiPage $page) {
@@ -332,16 +358,43 @@ class MySQL implements Storage {
             $diag->addError("url", "url_must_be_present", "Page url must be filled in.");
         }
 
-        $summary = $page->getSummary();
-        if (!$page->getSmall_change() && empty($summary)) {
-            $diag->addError("summary", "summary_must_be_present", "Summary field is required if not small change.");
-        }
-
-        if ($diag->getErrors()) {
-            throw $diag;
+        if ($page->getId()) {
+            $summary = $page->getSummary();
+            if (!$page->getSmall_change() && empty($summary)) {
+                $diag->addError("summary", "summary_must_be_present", "Summary field is required if not small change.");
+            }
+        } else {
+            $page->setSmall_change(false);
+            if (is_null($page->getSummary())) {
+                $page->setSummary("");
+            }
         }
 
         $trans = $this->db->beginRW();
+
+        // Test for name duplicity.
+        if ($page->getId()) {
+            if (is_null($page->getParent())) {
+                $res = $trans->query("SELECT id FROM wiki_pages WHERE url = %s AND parent_id IS NULL AND id <> %s", $page->getUrl(), $page->getId());
+            } else {
+                $res = $trans->query("SELECT id FROM wiki_pages WHERE url = %s AND parent_id = %s AND id <> %s", $page->getUrl(), $page->getParent()->getId(), $page->getId());
+            }
+        } else {
+            if (is_null($page->getParent())) {
+                $res = $trans->query("SELECT id FROM wiki_pages WHERE url = %s AND parent_id IS NULL", $page->getUrl());
+            } else {
+                $res = $trans->query("SELECT id FROM wiki_pages WHERE url = %s AND parent_id = %s", $page->getUrl(), $page->getParent()->getId());
+            }
+        }
+
+        if ($res->valid()) {
+            $diag->addError("name", "name_already_exists", "Page with same or simillar name already exists.");
+        }
+
+        if ($diag->getErrors()) {
+            $trans->rollback();
+            throw $diag;
+        }
 
         $nameChanged = $page->isChanged("name");
 
@@ -351,6 +404,18 @@ class MySQL implements Storage {
             $this->createPage($page, $trans);
         }
 
+        // Clear redirect_to column. It is set again by formatPageText(), if {{{redirect}}} directive
+        // is present in the wiki text. Otherwise, it should get cancelled.
+        $page->setRedirect_to(NULL);
+        $this->currentTransaction = $trans;
+        $this->formatPageText($page);
+        $this->currentTransaction = NULL;
+
+        if ($page->isChanged()) {
+            // If formatter updates the page, store it again.
+            $this->updatePage($page, $trans);
+        }
+
         $trans->commit();
 
         if ($nameChanged) {
@@ -358,6 +423,12 @@ class MySQL implements Storage {
         }
 
         \models\WikiPage::$pageChangeObserver->notifyObservers($page);
+    }
+
+    function updateRedirects(\models\WikiPage $oldPage, \models\WikiPage $newPage) {
+        $trans = $this->db->beginRW();
+        $trans->query("UPDATE wiki_pages SET redirect_to = %s WHERE redirect_to = %s", $newPage->getId(), $oldPage->getId());
+        $trans->commit();
     }
 
     function getReferencedPages(\models\WikiPage $page) {
@@ -1561,8 +1632,12 @@ class MySQL implements Storage {
     function storeWikiCache($key, $text, $trans = NULL) {
         $transactionStarted = false;
         if (is_null($trans)) {
-            $trans = $this->db->beginRW();
-            $transactionStarted = true;
+            if ($this->currentTransaction) {
+                $trans = $this->currentTransaction;
+            } else {
+                $trans = $this->db->beginRW();
+                $transactionStarted = true;
+            }
         }
 
         $trans->query("INSERT INTO wiki_text_cache (`key`, wiki_text)

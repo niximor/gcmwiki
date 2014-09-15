@@ -4,6 +4,7 @@ namespace models;
 
 require_once "models/Model.php";
 require_once "lib/Observer.php";
+require_once "lib/ascii.php";
 
 class WikiPage extends Model implements \lib\Observable {
 	protected $id;
@@ -15,6 +16,7 @@ class WikiPage extends Model implements \lib\Observable {
 	protected $revision;
 	protected $body_wiki;
 	protected $body_html;
+	protected $redirect_to;
 
 	protected $summary;
 	protected $small_change;
@@ -49,6 +51,13 @@ class WikiPage extends Model implements \lib\Observable {
 
 	public function getFullUrl() {
 		return implode("/", $this->getPath());
+	}
+
+	public static function nameToUrl($name) {
+		$url = \lib\utfToAscii($name);
+		$url = preg_replace("/[^a-zA-Z0-9\s-_\s:]+/", "_", $url);
+		$url = preg_replace("/[\s]+/", " ", $url);
+		return $url;
 	}
 }
 

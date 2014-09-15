@@ -143,9 +143,20 @@ class WikiController extends SpecialController {
 			return;
 		}
 
-		if (isset($_POST["body"])) {
+		$urlChanged = false;
+		if (isset($_POST["body"]) && isset($_POST["name"])) {
 			$this->relatedPage->updateBody($_POST["body"]);
+
+			$oldName = $this->relatedPage->getName();
 			$this->relatedPage->setName($_POST["name"]);
+
+			$oldUrl = $this->relatedPage->getUrl();
+			$newUrl = \models\WikiPage::nameToUrl($_POST["name"]);
+
+			if ($newUrl != $oldUrl) {
+				$this->relatedPage->setUrl($newUrl);
+				$urlChanged = strtolower($newUrl) != strtolower($oldUrl);
+			}
 
 			$this->relatedPage->setSmall_change((isset($_POST["small_change"]))?true:false);
 			$this->relatedPage->setSummary($_POST["summary"]);
@@ -153,7 +164,21 @@ class WikiController extends SpecialController {
 
 		try {
 			$be->storePage($this->relatedPage);
-			$this->template->redirect($this->template->getSelf());
+
+			// Generate "fake" redirect page from the old URL.
+			if ($urlChanged) {
+				echo "URL changed, create page with old URL ".$oldUrl."<br />";
+				$oldPage = new \models\WikiPage();
+				$oldPage->setName($oldName);
+				$oldPage->setUrl($oldUrl);
+				$oldPage->setParent($this->relatedPage->getParent());
+				$oldPage->updateBody("{{{redirect:".$newUrl."}}}");
+				
+				$be->storePage($oldPage);
+				$be->updateRedirects($this->relatedPage, $oldPage);
+			}
+
+			$this->template->redirect(implode("/", $this->relatedPage->getPath()));
 		} catch (\storage\Diagnostics $e) {
 			\lib\Session::Set("Errors", $e->getErrorsForFields(), false);
 			\lib\Session::Set("Form", $_POST, false);

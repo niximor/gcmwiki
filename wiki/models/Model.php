@@ -48,14 +48,33 @@ class Model {
         }
     }
 
+    /**
+     * Return list of all changed columns.
+     * @return array List of all column names that has been changed.
+     */
     public function listChanged() {
         return array_keys($this->_changed);
     }
 
-    public function isChanged($name) {
-        return $name && $name[0] != '_' && isset($this->_changed[$name]);
+    /**
+     * Determines whether given column is changed. If column is not specified, it means any column has been changed.
+     * @param string $name Name of column. Can be NULL, which means any column.
+     * @return true if $column is changed or if $column is NULL, if any column has been changed.
+     *   false if $column has been changed or if none column has been changed if $column is NULL.
+     */
+    public function isChanged($name = NULL) {
+        if (!is_null($name)) {
+            return $name && $name[0] != '_' && isset($this->_changed[$name]);
+        } else {
+            return !empty($this->_changed);
+        }
     }
 
+    /**
+     * Clear changed state of column or all columns if $onlyName is NULL.
+     * @param string $onlyName If specified, clears changed stat only of that column. Otherwise, clears changed state
+     *   of all columns.
+     */
     public function clearChanged($onlyName = NULL) {
         if (!is_null($onlyName) && isset($this->_changed[$onlyName])) {
             unset($this->_changed[$onlyName]);
