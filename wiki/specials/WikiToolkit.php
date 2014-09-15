@@ -35,19 +35,34 @@ class WikiToolkit extends SpecialController {
 
 	public function register() {
 		if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["username"]) && isset($_POST["password"]) && isset($_POST["email"])) {
-			$u = new \models\User();
-			$u->setName($_POST["username"]);
-			$u->setPassword($_POST["password"]);
-			$u->setEmail($_POST["email"]);
+			if (\models\User::validatePassword($_POST["password"])) {
+				$u = new \models\User();
+				$u->setName($_POST["username"]);
+				$u->setPassword($_POST["password"]);
+				$u->setEmail($_POST["email"]);
 
-			$be = $this->getBackend();
-			$be->storeUserInfo($u);
-
-			\view\Messages::Add("Registration successfull.", \view\Message::Success);
-			$this->template->redirect("/");
+				$be = $this->getBackend();
+				try {
+					$be->storeUserInfo($u);
+					\view\Messages::Add("Registration successfull.", \view\Message::Success);
+					$this->template->redirect("/");
+				} catch (\storage\Diagnostics $diag) {
+					\lib\Session::Set("Errors", $diag->getErrorsForFields(), false);
+					\lib\Session::Set("Form", $_POST, false);
+					$this->template->redirect($this->template->getSelf());
+				}
+			} else {
+				$this->template->redirect($this->template->getSelf());
+			}
 		}
 
 		$page = new \view\Template("wiki/register.php");
+		
+		$page->addVariable("Errors", (array)\lib\Session::Get("Errors"));
+		$page->addVariable("Form", (array)\lib\Session::Get("Form"));
+		\lib\Session::Set("Errors", NULL);
+		\lib\Session::Set("Form", NULL);
+
 		$this->template->setChild($page);
 
 		$this->template->addNavigation("System", NULL);
@@ -295,6 +310,12 @@ class WikiToolkit extends SpecialController {
 	protected function _group_index($be) {
 		$child = new \view\Template("wiki/groups.php");
 		$child->addVariable("Groups", $be->listGroups(NULL, array("userCount")));
+		
+		$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
+		$child->addVariable("Form", (array)\lib\Session::Get("Form"));
+		\lib\Session::Set("Errors", NULL);
+		\lib\Session::Set("Form", NULL);
+
 		$this->template->setChild($child);
 
 		$this->template->addNavigation("System", NULL);
@@ -343,13 +364,25 @@ class WikiToolkit extends SpecialController {
 
 		if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$group->setName($_POST["name"]);
-			$be->storeGroupInfo($group);
-
-			\view\Messages::Add(sprintf("Group %s has been modified.", $group->getName()), \view\Message::Success);
-			$this->template->redirect("/wiki:groups");
+	
+			try {
+				$be->storeGroupInfo($group);
+				\view\Messages::Add(sprintf("Group %s has been modified.", $group->getName()), \view\Message::Success);
+				$this->template->redirect("/wiki:groups");
+			} catch (\storage\Diagnostics $diag) {
+				\lib\Session::Set("Errors", $diag->getErrorsForFields(), false);
+				\lib\Session::Set("Form", $_POST, false);
+				$this->template->redirect($this->template->getSelf()."?modify=".$group->getId());
+			}			
 		} else {
 			$child = new \view\Template("wiki/groups/modify.php");
 			$child->addVariable("Group", $group);
+
+			$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
+			$child->addVariable("Form", (array)\lib\Session::Get("Form"));
+			\lib\Session::Set("Errors", NULL);
+			\lib\Session::Set("Form", NULL);
+
 			$this->template->setChild($child);
 		}
 	}
@@ -403,8 +436,13 @@ class WikiToolkit extends SpecialController {
 			$g = new \models\Group();
 			$g->setName($_POST["name"]);
 
-			$be->storeGroupInfo($g);
-			\view\Messages::Add(sprintf("Group %s has been created.", $g->getName()), \view\Message::Success);
+			try {
+				$be->storeGroupInfo($g);
+				\view\Messages::Add(sprintf("Group %s has been created.", $g->getName()), \view\Message::Success);
+			} catch (\storage\Diagnostics $diag) {
+				\lib\Session::Set("Errors", $diag->getErrorsForFields(), false);
+				\lib\Session::Set("Form", $_POST, false);
+			}
 		}
 		$this->template->redirect("/wiki:groups");
 	}

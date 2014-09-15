@@ -32,7 +32,8 @@
 <form action="<?php echo $this->url("/wiki:groups?add"); ?>" method="post">
 	<div class="fullwidth nogrid">
 		<label for="name">Group name:</label>
-		<div><input type="text" name="name" /></div>
+		<div><input type="text" name="name" value="<?php if (isset($Form) && isset($Form["name"])) echo htmlspecialchars($Form["name"]); ?>" /></div>
+		<?php if (isset($Errors["name"])) { echo "<ul>"; foreach ($Errors["name"] as $err) { echo "<li>".$err->message."</li>"; } echo "</ul>"; } ?>
 	</div>
 
 	<div class="buttons">

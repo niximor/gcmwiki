@@ -572,6 +572,31 @@ class MySQL implements Storage {
     public function storeUserInfo(\models\User $user) {
         $trans = $this->db->beginRW();
 
+        $diag = new Diagnostics();
+
+        // Test for user already exists.
+        if ($user->getId()) {
+            if ($user->isChanged("name")) {
+                $res = $trans->query("SELECT id FROM users WHERE name = %s AND id <> %s", $user->getName(), $user->getId());
+            }
+        } else {
+            // When creating new user, it must exists.
+            $name = $user->getName();
+            if (empty($name)) {
+                $diag->addError("name", "name_must_be_present", "User name must be present.");
+            }
+
+            $res = $trans->query("SELECT id FROM users WHERE name = %s", $user->getName());
+        }
+
+        if (isset($res) && $res->valid()) {
+            $diag->addError("name", "user_already_exists", "User with selected name already exists.");
+        }
+
+        if ($diag->getErrors()) {
+            throw $diag;
+        }
+
         if ($user->getId()) {
             $columns = array();
             $values = array();
@@ -606,7 +631,14 @@ class MySQL implements Storage {
             $values = array();
             $strings = array();
 
-            $salt = \mcrypt_create_iv(64, MCRYPT_DEV_URANDOM);
+            if (function_exists("mcrypt_create_iv")) {
+                $salt = \mcrypt_create_iv(64, MCRYPT_DEV_URANDOM);
+            } else {
+                $salt = "";
+                for ($i = 0; $i < 64; ++$i) {
+                    $salt += chr(mt_rand(0, 255));
+                }
+            }
 
             foreach ($user->listChanged() as $column) {
                 $columns[] = $column;
@@ -1231,6 +1263,28 @@ class MySQL implements Storage {
 
     function storeGroupInfo(\models\Group $group) {
         $trans = $this->db->beginRW();
+
+        $diag = new Diagnostics();
+
+        if ($group->getId()) {
+            if ($group->isChanged("name")) {
+                $res = $trans->query("SELECT id FROM groups WHERE name = %s AND id <> %s", $group->getName(), $group->getId());
+            }
+        } else {
+            if (empty($group->getName())) {
+                $diag->addError("name", "name_must_be_present", "Group name must be present.");
+            } else {
+                $res = $trans->query("SELECT id FROM groups WHERE name = %s", $group->getName());
+            }
+        }
+
+        if ($res && $res->valid()) {
+            $diag->addError("name", "name_already_exists", "Group with given name already exists.");
+        }
+
+        if ($diag->getErrors()) {
+            throw $diag;
+        }
 
         if (is_null($group->getId())) {
             $trans->query("INSERT INTO groups (name) VALUES (%s)", $group->getName());
