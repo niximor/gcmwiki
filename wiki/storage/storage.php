@@ -177,4 +177,40 @@ interface Storage {
 
     function invalidateWikiCache($key);
     function storeWikiCache($key, $text);
+
+    /**
+     * Returns implementation of Attachments module.
+     * @return Instance of Attachments interface.
+     */
+    function getAttachmentsModule();
 }
+
+/**
+ * Module implementing work with attachments.
+ */
+interface Attachments {
+    function load($name, $requiredColumns = NULL, $revision = NULL);
+    function store(\modules\Attachment $attachment);
+}
+
+/**
+ * Module implementing access to filesystem for storing attachment data.
+ */
+interface DataStore {
+    /**
+     * Returns handle to file representing given $attachment with given $subId.
+     * @param \models\Attachment $attachment Attachment to be loaded.
+     * @param string $subId Required Sub ID of given attachment.
+     */
+    function load(\models\Attachment $attachment, $subId);
+
+    /**
+     * Store data, pointed by $f, as $attachment with given $subId. If entry in storage for given combination
+     * of attachment and subId already exists, it is overwritten without asking or even notifying in any way.
+     * @param resource $fileHandle Handle to file opened by fopen() or similar, that can be read.
+     * @param \models\Attachment $attachment Attachment for which the content should be saved.
+     * @param string $subId Sub ID which should be used to store this file.
+     */
+    function store($fileHandle, \models\Attachment $attachment, $subId);
+}
+

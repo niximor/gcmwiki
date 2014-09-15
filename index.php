@@ -65,6 +65,19 @@ try {
 	if (isset($sp)) {
 		$controller = new $sp($page, $wikiPage);
 
+		// If method name is PHP keyword, prefix it with _.
+		// Source of keywords: http://php.net/manual/en/reserved.keywords.php
+		if (in_array($method, array("break", "clone", "die", "empty", "endswitch", "final", "global",
+			"include_once", "list", "privage", "return", "try", "xor", "abstract", "callable",
+			"const", "do", "enddeclare", "endwhile", "finally", "goto", "instanceof", "namespace",
+			"protected", "static", "unset", "yield", "and", "case", "continue", "echo", "endfor",
+			"eval", "for", "if", "insteadof", "new", "public", "switch", "use", "array",
+			"catch", "declare", "else", "endforeach", "exit", "foreach", "implements", "interface",
+			"or", "require", "throw", "var", "as", "class", "default", "elseif", "endif", "extends",
+			"function", "include", "isset", "print", "require_once", "trait", "while"))) {
+			$method = "_".$method;
+		}
+
 		if (method_exists($controller, $method)) {
 			call_user_func_array(array($controller, $method), $params);
 		} else {
