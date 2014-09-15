@@ -19,7 +19,7 @@
 			<div id="header">
 				<h1><?php echo "<a href=\"".$this->url("/".Config::Get("DefaultPage"))."\">".Config::Get("Title", "GCM::Wiki")."</a>"; ?></h1>
 <?php
-	if (isset($Title)) { echo "<h2>".$Title."</h2>"; }
+	if (isset($Title)) { echo "<h2>".htmlspecialchars($Title)."</h2>"; }
 ?>
 				<div id="userpanel">
 					<?php if (!$CurrentUser) { ?>
@@ -61,19 +61,19 @@
 	foreach ($Messages as $msg) {
 		switch ($msg->type) {
 			case \view\Message::Error:
-				echo "<p class=\"error message\">".$msg->text."</p>\n";
+				echo "<p class=\"error message\">".htmlspecialchars($msg->text)."</p>\n";
 				break;
 
 			case \view\Message::Information:
-				echo "<p class=\"information message\">".$msg->text."</p>\n";
+				echo "<p class=\"information message\">".htmlspecialchars($msg->text)."</p>\n";
 				break;
 
 			case \view\Message::Warning:
-				echo "<p class=\"warning message\">".$msg->text."</p>\n";
+				echo "<p class=\"warning message\">".htmlspecialchars($msg->text)."</p>\n";
 				break;
 
 			case \view\Message::Success:
-				echo "<p class=\"success message\">".$msg->text."</p>\n";
+				echo "<p class=\"success message\">".htmlspecialchars($msg->text)."</p>\n";
 				break;
 		}
 	}
@@ -83,7 +83,16 @@
 			</div>
 
 			<div id="footer">
-				 Running on GCM::Wiki
+<?php
+	if (isset($BottomNavigation) && !empty($BottomNavigation)) {
+		echo "<ul>";
+		foreach ($BottomNavigation as $Action) {
+			echo "<li>".$Action."</li>";
+		}
+		echo "</ul>";
+	}
+?>
+				 Running on <a href="http://github.com/niximor/gcmwiki">GCM::Wiki</a>
 			</div>
 		</div>
 	</body>

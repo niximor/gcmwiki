@@ -2,6 +2,7 @@
 
 namespace models;
 
+require_once "models/Model.php";
 require_once "models/WikiPage.php";
 require_once "lib/Observer.php";
 

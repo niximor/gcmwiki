@@ -16,7 +16,7 @@
 ?>
 		<tr>
 			<td>
-				<a href="<?php echo $this->url("/wiki:user/".$User->name); ?>"><?php echo $User->name; ?></a>
+				<a href="<?php echo $this->url("/wiki:user/".$User->name); ?>"><?php echo htmlspecialchars($User->name); ?></a>
 				<?php if ($User->logged_in) echo "*"; ?>
 			</td>
 			<td><?php echo $User->registered; ?></td>

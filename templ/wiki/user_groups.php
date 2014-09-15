@@ -25,8 +25,10 @@
 			<option value="0">Create new group</option>
 			<?php foreach ($Groups as $Group) { if (!isset($AlreadyMember[$Group->id])) echo "<option value=\"".$Group->id."\">".htmlspecialchars($Group->name)."</option>"; } ?>
 		</select>
-		<input type="text" name="groupName" />
+		<input type="text" name="groupName" value="<?php if (isset($Form) && isset($Form["groupName"])) echo htmlspecialchars($Form["groupName"]); ?>" />
 		<input type="submit" name="add" value="Add" />
+
+		<?php if (isset($Errors["name"])) { echo "<ul>"; foreach ($Errors["name"] as $err) { echo "<li>".$err->message."</li>"; } echo "</ul>"; } ?>
 	</div>
 </form>
 

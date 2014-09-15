@@ -178,9 +178,8 @@ class WikiController extends SpecialController {
 				$oldPage->setUrl($oldUrl);
 				$oldPage->setParent($this->relatedPage->getParent());
 				$oldPage->updateBody("{{{redirect:".$newUrl."}}}");
-				
+
 				$be->storePage($oldPage);
-				$be->updateRedirects($this->relatedPage, $oldPage);
 			}
 
 			$this->template->redirect(implode("/", $this->relatedPage->getPath()));

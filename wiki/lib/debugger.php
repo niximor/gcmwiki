@@ -41,11 +41,11 @@ class Debugger {
 		echo '<h2>'.get_class($exc).'</h2>';
 		echo '<dl>';
 		echo '<dt style="background-color: #436F9C; color: white; font-weight: bold; font-size: 1.2em; padding: 0.2em 0.5em;">Message</dt>';
-		echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;">'.$exc->getMessage().'</dd>';
+		echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;">'.htmlspecialchars($exc->getMessage()).'</dd>';
 
 		if ($exc instanceof \drivers\mysql\QueryException) {
 			echo '<dt style="background-color: #436F9C; color: white; font-weight: bold; font-size: 1.2em; padding: 0.2em 0.5em;">Query</dt>';
-			echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;"><pre>'.$exc->getQuery().'</pre></dd>';
+			echo '<dd style="padding: 0.2em; 0.5em; margin: 0; margin-bottom: 1em;"><pre>'.htmlspecialchars($exc->getQuery()).'</pre></dd>';
 		}
 
 		echo '<dt style="background-color: #436F9C; color: white; font-weight: bold; font-size: 1.2em; padding: 0.2em 0.5em;">Stack trace</dt>';

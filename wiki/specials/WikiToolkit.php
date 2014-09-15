@@ -4,7 +4,8 @@ namespace specials;
 
 require_once "mail/MailMessage.php";
 require_once "specials/SpecialController.php";
-
+require_once "view/AdminModule.php";
+require_once "lib/Observer.php";
 
 class WikiToolkit extends SpecialController {
 	public function login() {
@@ -14,7 +15,7 @@ class WikiToolkit extends SpecialController {
 				\lib\Session::Set("UserId", $user->getId());
 				$this->template->redirect("/");
 			} else {
-				\view\Messages::Add("Invalid username or password.", \lib\Message::Error);
+				\view\Messages::Add("Invalid username or password.", \view\Message::Error);
 			}
 		}
 
@@ -157,21 +158,27 @@ class WikiToolkit extends SpecialController {
 
 	public function user($name) {
 		$be = $this->getBackend();
-		$user = $be->loadUserInfo($name, "name");
 
-		$child = new \view\Template("wiki/user.php");
-		$child->addVariable("User", $user);
+		try {
+			$user = $be->loadUserInfo($name, "name");
 
-		if (\lib\CurrentUser::hasPriv("admin_user_privileges")) {
-			$child->addVariable("AppliedPrivileges", $user->listAppliedPrivileges());
-			$child->addVariable("UserGroups", $be->listGroups($user));
+			$child = new \view\Template("wiki/user.php");
+			$child->addVariable("User", $user);
+
+			if (\lib\CurrentUser::hasPriv("admin_user_privileges")) {
+				$child->addVariable("AppliedPrivileges", $user->listAppliedPrivileges());
+				$child->addVariable("UserGroups", $be->listGroups($user));
+			}
+
+			$this->template->setChild($child);
+
+			$this->template->addNavigation("User profile", NULL);
+			$this->template->addNavigation($user->getName(), $this->template->getSelf());
+			$this->template->setTitle("User profile: ".$user->getName());
+		} catch (\storage\UserNotFoundException $e) {
+			$child = new \view\Template("wiki/not_found.php");
+			$this->template->setChild($child);
 		}
-
-		$this->template->setChild($child);
-
-		$this->template->addNavigation("User profile", NULL);
-		$this->template->addNavigation($user->getName(), $this->template->getSelf());
-		$this->template->setTitle("User profile: ".$user->getName());
 	}
 
 	public function settings() {
@@ -251,14 +258,19 @@ class WikiToolkit extends SpecialController {
 							$group = new \models\Group;
 							$group->setName($_POST["groupName"]);
 
-							$be->storeGroupInfo($group);
-							$be->addUserToGroup($user, $group);
+							try {
+								$be->storeGroupInfo($group);
+								$be->addUserToGroup($user, $group);
+								\view\Messages::Add(sprintf("User has been added to group %s", $group->getName()), \view\Message::Success);
+							} catch (\storage\Diagnostics $diag) {
+								\lib\Session::Set("Errors", $diag->getErrorsForFields(), false);
+								\lib\Session::Set("Form", $_POST, false);
+							}
 						} else {
 							$group = $be->loadGroupInfo($_POST["groupId"]);
 							$be->addUserToGroup($user, $group);
+							\view\Messages::Add(sprintf("User has been added to group %s", $group->getName()), \view\Message::Success);
 						}
-
-						\view\Messages::Add(sprintf("User has been added to group %s", $group->getName()), \view\Message::Success);
 					} elseif (isset($_POST["remove"]) && is_array($_POST["remove"])) {
 						foreach ($_POST["remove"] as $key=>$dummy) {
 							$group = $be->loadGroupInfo($key);
@@ -275,6 +287,11 @@ class WikiToolkit extends SpecialController {
 				$child->addVariable("User", $user);
 				$child->addVariable("UserGroups", $be->listGroups($user));
 				$child->addVariable("Groups", $be->listGroups());
+
+				$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
+				$child->addVariable("Form", (array)\lib\Session::Get("Form"));
+				\lib\Session::Set("Errors", NULL);
+				\lib\Session::Set("Form", NULL);
 
 				$this->template->setChild($child);
 			} catch (\drivers\EntryNotFoundException $e) {
@@ -485,8 +502,8 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _users_unban($be, \models\User $user) {
-		if ($user->status_id == User::STATUS_BANNED) {
-			$user->status_id = User::STATUS_LIVE;
+		if ($user->status_id == \models\User::STATUS_BANNED) {
+			$user->status_id = \models\User::STATUS_LIVE;
 			$be->storeUserInfo($user);
 
 			\view\Messages::Add(sprintf("User %s has been unbanned.", $user->getName()), \view\Message::Success);
@@ -632,7 +649,54 @@ class WikiToolkit extends SpecialController {
 			$this->template->setChild($child);
 		}
 	}
+
+	public function admin() {
+		$child = new \view\Template("wiki/admin.php");
+
+		$items = array();
+
+		if (\lib\CurrentUser::hasPriv("admin_users")) {
+			$items[] = new \view\AdminModule("Users", "/wiki:users");
+		}
+
+		if (\lib\CurrentUser::hasPriv("admin_groups")) {
+			$items[] = new \view\AdminModule("Groups", "/wiki:groups");
+		}
+
+		if (\lib\CurrentUser::hasPriv("admin_superadmin")) {
+			$items[] = new \view\AdminModule("System config", "/wiki:config");
+		}
+
+		$child->addVariable("Modules", $items);
+
+		if (!empty($items)) {
+			$this->template->setChild($child);
+		} else {
+			$child = new \view\Template("need_privileges.php");
+			$this->template->setChild($child);
+		}
+	}
+}
+
+class PageRenderObserver implements \lib\Observer {
+	public function notify(\lib\Observable $template) {
+		$adminAccessPrivList = array(
+			"admin_users", "admin_groups", "admin_superadmin"
+		);
+
+		$hasAdminAccess = false;
+		foreach ($adminAccessPrivList as $priv) {
+			if (\lib\CurrentUser::hasPriv($priv)) {
+				$hasAdminAccess = true;
+			}
+		}
+
+		if ($hasAdminAccess) {
+			$template->addNavigation("Admin", "/wiki:admin", true);
+		}
+	}
 }
 
 \Config::registerSpecial("wiki", "\\specials\\WikiToolkit");
+\view\Template::$beforeRenderObserver->registerObserver(new PageRenderObserver());
 

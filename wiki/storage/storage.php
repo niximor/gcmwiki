@@ -22,6 +22,12 @@ class PageNotFoundException extends Exception {
 	}
 }
 
+class UserNotFoundException extends Exception {
+    function __construct($userName, $parentExc = NULL) {
+        parent::__construct($userName, 0, $parentExc);
+    }
+}
+
 class Diagnostics extends Exception {
 	protected $errors;
 

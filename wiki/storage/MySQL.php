@@ -103,6 +103,7 @@ class MySQL implements Storage {
         $parent = NULL;
 
         $part_len = count($path);
+        $lastPart = false;
         for ($i = 0; $i < $part_len; ++$i) {
             $part = $path[$i];
 
@@ -110,6 +111,7 @@ class MySQL implements Storage {
 
             if ($i == $part_len - 1) {
                 $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
+                $lastPart = true;
             } else {
                 $columns = array("id", "name", "url", "user_id", "ip");
             }
@@ -126,7 +128,7 @@ class MySQL implements Storage {
 
             $columns[] = "u.name AS user_name";
 
-            if (!is_null($revision)) {
+            if (!is_null($revision) && $lastPart) {
                 // TODO: Display that we are showing old version of page.
                 // TODO: Support for current revision as parameter (permalink).
                 if (($key = array_search("p.id", $columns)) !== false) {
@@ -134,9 +136,11 @@ class MySQL implements Storage {
                 }
                 $table = "wiki_pages_history";
                 $where = " AND revision = ".$revision;
+                $idColumn = "p.page_id";
             } else {
                 $table = "wiki_pages";
                 $where = "";
+                $idColumn = "p.id";
             }
 
             $join[] = "LEFT JOIN users u ON (p.user_id = u.id)";
@@ -150,12 +154,12 @@ class MySQL implements Storage {
                 if (is_null($parent)) {
                     $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
                         ".implode(" ", $join)."
-                        WHERE p.id = GET_PAGE_ID(%s, NULL)".$where;
+                        WHERE ".$idColumn." = GET_PAGE_ID(%s, NULL)".$where;
                     $res = $trans->query($query, $part);
                 } else {
                     $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
                         ".implode(" ", $join)."
-                        WHERE p.id = GET_PAGE_ID(%s, %s)".$where;
+                        WHERE ".$idColumn." = GET_PAGE_ID(%s, %s)".$where;
                     $res = $trans->query($query, $part, $parent->id);
                 }
             } else {
@@ -289,8 +293,8 @@ class MySQL implements Storage {
 
         if (!empty($columns)) {
             if ($incRevision) {
-                $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision)
-                                SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision
+                $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to)
+                                SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to
                                 FROM wiki_pages WHERE id = %s", $page->getId());
 
                 $columns[] = "last_modified = NOW()";
@@ -542,7 +546,7 @@ class MySQL implements Storage {
                 $trans->commit();
             }
 
-            throw $e;
+            throw new \storage\UserNotFoundException($id, $e);
         }
 
         return $res;

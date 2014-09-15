@@ -2,6 +2,8 @@
 
 namespace models;
 
+require_once "models/Model.php";
+
 class WikiHistoryEntry extends Model {
 	protected $id;
 	protected $revision;

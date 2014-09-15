@@ -2,6 +2,8 @@
 
 namespace view;
 
+require_once "lib/Observer.php";
+
 class PageAction {
 	public $url;
 	public $name;
@@ -20,7 +22,7 @@ class PageAction {
 	}
 }
 
-class Template {
+class Template implements \lib\Observable {
 	protected $file;
 
 	protected $parent = NULL;
@@ -29,6 +31,12 @@ class Template {
 	protected $variables = array();
 	protected $self;
 
+	public static $beforeRenderObserver;
+
+	public static function init_static() {
+		self::$beforeRenderObserver = new \lib\ObserverCollection();
+	}
+
 	function __construct($file, Template $parent = NULL) {
 		$file = dirname(__FILE__)."/../../templ/".$file;
 		$this->file = $file;
@@ -36,6 +44,7 @@ class Template {
 		if (!is_null($parent)) $this->parent = $parent;
 
 		$this->variables["Actions"] = array();
+		$this->variables["BottomNavigation"] = array();
 		$this->variables["Navigation"] = array();
 	}
 
@@ -83,11 +92,15 @@ class Template {
 		}
 	}
 
-	function addNavigation($name, $url) {
+	function addNavigation($name, $url, $bottom = false) {
 		if (!is_null($this->parent)) {
-			$this->parent->addNavigation($name, $this->url($url));
+			$this->parent->addNavigation($name, $this->url($url), $bottom);
 		} else {
-			$this->variables["Navigation"][] = new PageAction($name, $this->url($url));
+			if ($bottom) {
+				$this->variables["BottomNavigation"][] = new PageAction($name, $this->url($url));
+			} else {
+				$this->variables["Navigation"][] = new PageAction($name, $this->url($url));
+			}
 		}
 	}
 
@@ -100,6 +113,8 @@ class Template {
 	}
 
 	function render() {
+		self::$beforeRenderObserver->notifyObservers($this);
+
 		$parents = array();
 		$parent = $this->parent;
 		while ($parent != NULL) {
@@ -178,3 +193,4 @@ class RootTemplate extends Template {
 	}
 }
 
+Template::init_static();

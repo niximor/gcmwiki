@@ -20,6 +20,9 @@ body { background-color: #E4ECF0; color: black; font-family: verdana, arial, hel
 #navigation li:before { content: "\00A0\00BB\00A0"; }
 
 #footer { border-top: solid 0.1em #E0E0E0; background-color: #E4EcF0; text-align: right; color: #A1BFCF; padding: 0.5em 1em; }
+#footer ul { list-style-type: none; margin: 0; padding: 0; display: inline-block; }
+#footer ul li:after { content: ""; padding-right: 0.5em; border-right: dotted 0.1em #A1BFCF; margin-right: 0.2em; }
+#footer a { color: #617F8F; }
 
 #main { padding: 1em; }
 #main h1 { font-size: 1.6em; border-bottom: solid 0.15em #D5E5F0; margin: 0.5em 0; }
