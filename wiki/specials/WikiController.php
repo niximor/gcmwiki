@@ -36,7 +36,12 @@ class WikiController extends SpecialController {
 
 			$comments = $be->loadComments($this->relatedPage);
 			
-			if ($this->Acl->page_read) {
+			$redirect = $this->relatedPage->getRedirected_from();
+			if (!is_null($redirect)) {
+				$aclRedirect = $be->loadPageAcl($redirect, \lib\CurrentUser::i());
+			}
+
+			if ($this->Acl->page_read && (is_null($redirect) || $aclRedirect->page_read)) {
 				$child = new \view\Template("page/index.php");
 				$child->addVariable("Page", $this->relatedPage);
 				$child->addVariable("Acl", $this->Acl);
