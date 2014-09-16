@@ -128,8 +128,9 @@ function select($name, $value) {
 var btnUser = document.getElementById("btnAddUser");
 var btnGroup = document.getElementById("btnAddGroup");
 
-function createTd(name, acl) {
+function createTd(name, acl, className) {
 	var td = document.createElement("td");
+	td.className = "acl " + className;
 
 	var select = document.createElement("select");
 	select.name = name + "[" + acl + "]";
@@ -153,21 +154,23 @@ function createTd(name, acl) {
 	select.selectedIndex = 2;
 
 	td.appendChild(select);
+	installCheckbox(select);
 
 	return td;
 }
 
 function addRow(parent, name, label) {
 	var tds = [];
-	tds.push(createTd(name, "read"));
-	tds.push(createTd(name, "write"));
-	tds.push(createTd(name, "admin"));
-	tds.push(createTd(name, "comment_read"));
-	tds.push(createTd(name, "comment_write"));
+	tds.push(createTd(name, "read", "page_read"));
+	tds.push(createTd(name, "write", "page_write"));
+	tds.push(createTd(name, "admin", "page_admin"));
+	tds.push(createTd(name, "comment_read", "comment_read"));
+	tds.push(createTd(name, "comment_write", "comment_write"));
 
 	var trs = parent.getElementsByTagName("tr");
 
 	var tdLabel = document.createElement("td");
+	tdLabel.className = "acl_name";
 	tdLabel.innerHTML = label;
 	
 	var tr = document.createElement("tr");

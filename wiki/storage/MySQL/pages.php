@@ -672,14 +672,17 @@ class Pages extends Module {
 
                 if (isset($users[$uacl->id])) unset($users[$uacl->id]);
             }
-            $trans->query("INSERT INTO page_acl_user (page_id, user_id, page_read, page_write, page_admin, comment_read, comment_write)
-                VALUES ".implode(",", $sets)."
-                ON DUPLICATE KEY UPDATE
-                    page_read = VALUES(page_read),
-                    page_write = VALUES(page_write),
-                    page_admin = VALUES(page_admin),
-                    comment_read = VALUES(comment_read),
-                    comment_write = VALUES(comment_write)", $values);
+
+            if (!empty($sets)) {
+                $trans->query("INSERT INTO page_acl_user (page_id, user_id, page_read, page_write, page_admin, comment_read, comment_write)
+                    VALUES ".implode(",", $sets)."
+                    ON DUPLICATE KEY UPDATE
+                        page_read = VALUES(page_read),
+                        page_write = VALUES(page_write),
+                        page_admin = VALUES(page_admin),
+                        comment_read = VALUES(comment_read),
+                        comment_write = VALUES(comment_write)", $values);
+            }
         }
 
         if (count($users) > 0) {
@@ -720,14 +723,17 @@ class Pages extends Module {
 
                 if (isset($groups[$gacl->id])) unset($groups[$gacl->id]);
             }
-            $trans->query("INSERT INTO page_acl_group (page_id, group_id, page_read, page_write, page_admin, comment_read, comment_write)
-                VALUES ".implode(",", $sets)."
-                ON DUPLICATE KEY UPDATE
-                    page_read = VALUES(page_read),
-                    page_write = VALUES(page_write),
-                    page_admin = VALUES(page_admin),
-                    comment_read = VALUES(comment_read),
-                    comment_write = VALUES(comment_write)", $values);
+
+            if (!empty($sets)) {
+                $trans->query("INSERT INTO page_acl_group (page_id, group_id, page_read, page_write, page_admin, comment_read, comment_write)
+                    VALUES ".implode(",", $sets)."
+                    ON DUPLICATE KEY UPDATE
+                        page_read = VALUES(page_read),
+                        page_write = VALUES(page_write),
+                        page_admin = VALUES(page_admin),
+                        comment_read = VALUES(comment_read),
+                        comment_write = VALUES(comment_write)", $values);
+            }
         }
 
         if (count($groups) > 0) {
