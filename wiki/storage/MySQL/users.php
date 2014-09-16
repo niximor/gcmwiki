@@ -605,7 +605,11 @@ class Users extends Module {
                 $priv->setValue($row->value);
             }
 
-            $map[$row->user_id] = $priv;
+            if (is_null($row->user_id)) {
+                $map[NULL] = $priv;
+            } else {
+                $map[$row->user_id] = $priv;
+            }
         }
 
         $groupsMap = array();
@@ -640,7 +644,12 @@ class Users extends Module {
             $res = $trans->query("SELECT id, name FROM users WHERE id IN (".implode(", ", $strings).") ORDER BY name ASC", $values);
             $res->setClassFactory("\\models\\UserAppliedPrivilege");
             foreach ($res as $row) {
-                $priv = $map[$row->id];
+                if ($row->id == 0) {
+                    $priv = $map[NULL];
+                } else {
+                    $priv = $map[$row->id];
+                }
+
                 $row->priv_source = $priv;
 
                 if ($priv instanceof \models\GroupSystemPrivilege) {

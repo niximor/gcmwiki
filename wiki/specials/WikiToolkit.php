@@ -335,13 +335,13 @@ class WikiToolkit extends SpecialController {
 
 		$this->template->setChild($child);
 
-		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->addNavigation("Groups", $this->template->getSelf());
 		$this->template->setTitle("Groups");
 	}
 
 	protected function _group_listUsers($be, \models\Group $group) {
-		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->addNavigation("Groups", $this->template->getSelf());
 		$this->template->addNavigation($group->getName(), NULL);
 		$this->template->addNavigation("Users", $this->template->getSelf()."?listUsers=".$group->getId());
@@ -373,7 +373,7 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _group_modify($be, \models\Group $group) {
-		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->addNavigation("Groups", $this->template->getSelf());
 		$this->template->addNavigation($group->getName(), NULL);
 		$this->template->addNavigation("Modify", $this->template->getSelf()."?modify=".$group->getId());
@@ -413,7 +413,7 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _group_privileges($be, \models\Group $group) {
-		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->addNavigation("Groups", $this->template->getSelf());
 		$this->template->addNavigation($group->getName(), NULL);
 		$this->template->addNavigation("Privileges", $this->template->getSelf()."?privileges=".$group->getId());
@@ -556,7 +556,7 @@ class WikiToolkit extends SpecialController {
 	}
 
 	protected function _users_index($be) {
-		$this->template->addNavigation("System", NULL);
+		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->addNavigation("Users", $this->template->getSelf());
 		$this->template->setTitle("Users");
 
@@ -567,6 +567,10 @@ class WikiToolkit extends SpecialController {
 
 	public function config() {
 		if (\lib\CurrentUser::hasPriv("admin_superadmin")) {
+			$this->template->addNavigation("System", "/wiki:admin");
+			$this->template->addNavigation("System configuration", $this->template->getSelf());
+			$this->template->setTitle("System configuration");
+
 			$be = $this->getBackend();
 
 			$SystemVariables = $be->listSystemVariables();
@@ -651,6 +655,9 @@ class WikiToolkit extends SpecialController {
 	}
 
 	public function admin() {
+		$this->template->addNavigation("System", "/wiki:admin");
+		$this->template->setTitle("System administration");
+
 		$child = new \view\Template("wiki/admin.php");
 
 		$items = array();
@@ -678,7 +685,7 @@ class WikiToolkit extends SpecialController {
 	}
 }
 
-class PageRenderObserver implements \lib\Observer {
+class TemplateRenderObserver implements \lib\Observer {
 	public function notify(\lib\Observable $template) {
 		$adminAccessPrivList = array(
 			"admin_users", "admin_groups", "admin_superadmin"
@@ -698,5 +705,5 @@ class PageRenderObserver implements \lib\Observer {
 }
 
 \Config::registerSpecial("wiki", "\\specials\\WikiToolkit");
-\view\Template::$beforeRenderObserver->registerObserver(new PageRenderObserver());
+\view\Template::$beforeRenderObserver->registerObserver(new TemplateRenderObserver());
 
