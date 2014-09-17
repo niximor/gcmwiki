@@ -123,12 +123,12 @@ class Link extends InlineTrigger {
                     $url = implode("/", $fullPageUrl);
 
                     if ($url[0] == "/") {
-                        $url = $root.$url;
+                        $fullurl = $root.$url;
                     } else {
-                        $url = $root."/".$url;
+                        $fullurl = $root."/".$url;
                     }
 
-                    $ctx->generateHTMLInline(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($url)));
+                    $ctx->generateHTMLInline(sprintf('<a href="%s" class="page notfound">', htmlspecialchars($fullurl)));
                     $ctx->generate(htmlspecialchars($text));
                     $ctx->generateHTMLInline('</a>');
                     $generated = true;
@@ -151,10 +151,10 @@ class Link extends InlineTrigger {
 <<<EOF
 
 <p>
-Link na <a href="http://www.google.com" class="external">www.google.com</a> a 
-<a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky 
-<a href="http://www.google.com" class="external">www.google.com</a> a nebo 
-<a href="http://www.google.com" class="external">http://www.google.com</a> a taky 
+Link na <a href="http://www.google.com" class="external">www.google.com</a> a
+<a href="http://www.google.com" class="external">www.google.com</a>, stejne tak taky
+<a href="http://www.google.com" class="external">www.google.com</a> a nebo
+<a href="http://www.google.com" class="external">http://www.google.com</a> a taky
 <a href="http://www.google.com" class="external">s popiskem</a>.
 </p>
 

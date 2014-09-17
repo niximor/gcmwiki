@@ -53,7 +53,7 @@ class WikiFormatter {
         $ctx = $root = new format\RootContext($this);
         $this->context = $root;
         $this->context->setPage($pageContext);
-        
+
         foreach ($lines as $line) {
             $line = preg_replace('/\r$/', '', $line);
             $ctx->formatLine($ctx, $line);
@@ -86,7 +86,7 @@ class WikiFormatter {
             $this->currentLineLength = 0;
         }
         $this->startParagraph = false;
-        
+
         $this->output[] = $string;
         $this->log("Generate block '%s'", trim($string));
         $this->space = true;
@@ -97,7 +97,7 @@ class WikiFormatter {
             $this->currentLineLength += strlen($string);
         }
     }
-    
+
     public function generateHTMLInline($string) {
         if (empty($string)) return;
 
@@ -121,7 +121,7 @@ class WikiFormatter {
             $this->output[] = "\n";
             $this->currentLineLength = 0;
         }
-    	
+
         $this->output[] = $string;
         $this->log("Generate inline '%s'", $string);
         //$this->space = true;
@@ -202,11 +202,16 @@ class WikiFormatterSimple extends WikiFormatter {
         require_once "lib/format/Link.php";
         require_once "lib/format/Image.php";
 
+        require_once "lib/format/Attachment.php";
+
         $this->installLineTrigger(new format\Blockquote());
         $this->installLineTrigger(new format\Line());
         $this->installLineTrigger(new format\Lists());
         $this->installLineTrigger(new format\Table());
         $this->installLineTrigger($this->blockFormatter = new format\Block());
+
+        $at = new format\Attachment();
+        $at->register($this->blockFormatter);
 
         $this->installInlineTrigger(format\BasicFormat::Create("**", "strong"));
         $this->installInlineTrigger(format\BasicFormat::Create("//", "em"));

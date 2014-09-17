@@ -28,6 +28,10 @@ class UserNotFoundException extends Exception {
     }
 }
 
+class FileNotFoundException extends Exception {
+
+}
+
 class Diagnostics extends Exception {
 	protected $errors;
 
@@ -142,6 +146,24 @@ interface Storage {
 	function listPageAcl(\models\WikiPage $page);
 	function listPageUsersAcl(\models\WikiPage $page);
 	function listPageGroupsAcl(\models\WikiPage $page);
+
+    /**
+     * List begining letters of pages with number of pages belonging to given letter.
+     * @return array $struct
+     *     - string $letter Begining letter of page name.
+     *     - int $numOfPages Number of pages belonging to given letter.
+     */
+    function listPagesLetters();
+
+    /**
+     * List pages with given filter conditions.
+     * @param $filter Filter.
+     *     - string $letter First letter (A-Z or # for anything that is not A-Z).
+     *     - int $limit Number of pages.
+     *     - int $offset Offset of paging.
+     */
+    function listPages(\lib\Object $filter);
+
 	function storePageAcl(\models\WikiPage $page, \models\WikiAclSet $set);
 
     function verifyUser($username, $password);
@@ -172,7 +194,7 @@ interface Storage {
 
     function storeComment(\models\Comment $comment);
     function loadComments(\models\WikiPage $page);
-    function loadComment($commentId);
+    function loadComment($commentId, $withHistory = false);
     function getReferencedComments(\models\WikiPage $page);
 
     function invalidateWikiCache($key);
@@ -189,14 +211,26 @@ interface Storage {
  * Module implementing work with attachments.
  */
 interface Attachments {
-    function load($name, $requiredColumns = NULL, $revision = NULL);
-    function store(\modules\Attachment $attachment);
+    /**
+     * Load given attachment information (not the data itself).
+     * @param name Attachment name
+     * @param features List of features to load
+     * @param revision Load older revision. If NULL, loads most recent revision.
+     */
+    function load(\lib\Object $filter, $features = NULL);
+
+    /**
+     * Store attachment meta information (not the data itself).
+     */
+    function store(\models\Attachment $attachment);
 }
 
 /**
  * Module implementing access to filesystem for storing attachment data.
  */
 interface DataStore {
+    const ORIGINAL_FILE = "original";
+
     /**
      * Returns handle to file representing given $attachment with given $subId.
      * @param \models\Attachment $attachment Attachment to be loaded.
@@ -211,6 +245,6 @@ interface DataStore {
      * @param \models\Attachment $attachment Attachment for which the content should be saved.
      * @param string $subId Sub ID which should be used to store this file.
      */
-    function store($fileHandle, \models\Attachment $attachment, $subId);
+    function store($uploadedFileName, \models\Attachment $attachment, $subId);
 }
 

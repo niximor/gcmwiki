@@ -58,7 +58,7 @@ class WikiToolkit extends SpecialController {
 		}
 
 		$page = new \view\Template("wiki/register.php");
-		
+
 		$page->addVariable("Errors", (array)\lib\Session::Get("Errors"));
 		$page->addVariable("Form", (array)\lib\Session::Get("Form"));
 		\lib\Session::Set("Errors", NULL);
@@ -186,6 +186,8 @@ class WikiToolkit extends SpecialController {
 			if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				$u = \lib\CurrentUser::i();
 				$u->setEmail($_POST["email"]);
+				$u->setShowComments(isset($_POST["show_comments"]));
+				$u->setShowAttachments(isset($_POST["show_attachments"]));
 
 				$be = $this->getBackend();
 				$be->storeUserInfo($u);
@@ -308,18 +310,29 @@ class WikiToolkit extends SpecialController {
 		if (\lib\CurrentUser::hasPriv("admin_groups")) {
 			$be = $this->getBackend();
 
+			$addActions = false;
+
 			if (isset($_REQUEST["listUsers"])) {
 				$this->_group_listUsers($be, $be->loadGroupInfo($_REQUEST["listUsers"]));
+				$addActions = $_REQUEST["listUsers"];
 			} elseif (isset($_REQUEST["modify"])) {
 				$this->_group_modify($be, $be->loadGroupInfo($_REQUEST["modify"]));
+				$addActions = $_REQUEST["modify"];
 			} elseif (isset($_REQUEST["remove"])) {
 				$this->_group_remove($be, $be->loadGroupInfo($_REQUEST["remove"]));
 			} elseif (isset($_REQUEST["privileges"])) {
 				$this->_group_privileges($be, $be->loadGroupInfo($_REQUEST["privileges"]));
+				$addActions = $_REQUEST["privileges"];
 			} elseif (isset($_REQUEST["add"])) {
 				$this->_group_add($be);
 			} else {
 				$this->_group_index($be);
+			}
+
+			if ($addActions !== false) {
+				$this->template->addAction("Users in group", "/wiki:groups?listUsers=".$addActions);
+				$this->template->addAction("Edit", "/wiki:groups?modify=".$addActions);
+				$this->template->addAction("Privileges", "/wiki:groups?privileges=".$addActions);
 			}
 		}
 	}
@@ -327,7 +340,7 @@ class WikiToolkit extends SpecialController {
 	protected function _group_index($be) {
 		$child = new \view\Template("wiki/groups.php");
 		$child->addVariable("Groups", $be->listGroups(NULL, array("userCount")));
-		
+
 		$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
 		$child->addVariable("Form", (array)\lib\Session::Get("Form"));
 		\lib\Session::Set("Errors", NULL);
@@ -381,7 +394,7 @@ class WikiToolkit extends SpecialController {
 
 		if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$group->setName($_POST["name"]);
-	
+
 			try {
 				$be->storeGroupInfo($group);
 				\view\Messages::Add(sprintf("Group %s has been modified.", $group->getName()), \view\Message::Success);
@@ -390,7 +403,7 @@ class WikiToolkit extends SpecialController {
 				\lib\Session::Set("Errors", $diag->getErrorsForFields(), false);
 				\lib\Session::Set("Form", $_POST, false);
 				$this->template->redirect($this->template->getSelf()."?modify=".$group->getId());
-			}			
+			}
 		} else {
 			$child = new \view\Template("wiki/groups/modify.php");
 			$child->addVariable("Group", $group);
@@ -654,6 +667,74 @@ class WikiToolkit extends SpecialController {
 		}
 	}
 
+	public function pages() {
+		if (!\lib\CurrentUser::hasPriv("admin_superadmin") && !\lib\CurrentUser::hasPriv("acl_page_admin")) {
+			$child = new \view\Template("need_privileges.php");
+			$this->template->setChild($child);
+
+			return;
+		}
+
+		$this->template->addNavigation("System", "/wiki:admin");
+		$this->template->addNavigation("Pages", "/wiki:pages");
+		$this->template->setTitle("Pages");
+
+		$child = new \view\Template("wiki/pages/index.php");
+
+		$be = $this->getBackend();
+
+		// List letters with corresponding pages count.
+		$letters = array("#" => 0, "A" => 0, "B" => 0, "C" => 0, "D" => 0, "E" => 0, "F" => 0, "G" => 0, "H" => 0,
+			"I" => 0, "J" => 0, "K" => 0, "L" => 0, "M" => 0, "N" => 0, "O" => 0, "P" => 0, "Q" => 0, "R" => 0,
+			"S" => 0, "T" => 0, "U" => 0, "V" => 0, "W" => 0, "X" => 0, "Y" => 0, "Z" => 0);
+
+		foreach ($be->listPagesLetters() as $item) {
+			$letters[$item->letter] = $item->numOfPages;
+		}
+
+		$child->addVariable("Letters", $letters);
+
+		// List pages of current letter.
+		$selectedLetter = NULL;
+		if (isset($_REQUEST["l"]) && in_array($_REQUEST["l"], array_keys($letters))) {
+			$selectedLetter = $_REQUEST["l"];
+		} else {
+			foreach ($letters as $letter => $num) {
+				if ($num > 0) {
+					$selectedLetter = $letter;
+					break;
+				}
+			}
+		}
+
+		$child->addVariable("SelectedLetter", $selectedLetter);
+
+		if (!is_null($selectedLetter)) {
+			$limit = 25;
+
+			$currentPage = (isset($_REQUEST["p"]))?max($_REQUEST["p"], 1):1;
+
+			$sort = ((isset($_REQUEST["s"]) && in_array($_REQUEST["s"], array("name", "revision", "created", "last_modified", "links", "references")))?$_REQUEST["s"]:"name");
+			$dir = ((isset($_REQUEST["d"]) && in_array($_REQUEST["d"], array("ASC", "DESC")))?$_REQUEST["d"]:"ASC");
+
+			$child->addVariable("CurrentPage", $currentPage);
+			$child->addVariable("Limit", $limit);
+			$child->addVariable("CurrentSort", $sort);
+			$child->addVariable("CurrentDirection", $dir);
+
+			$filter = new \lib\Object();
+			$child->addVariable("Pages", $be->listPages($filter
+				->setLetter($selectedLetter)
+				->setLimit($limit)
+				->setOffset(($currentPage - 1) * $limit)
+				->setSort(array($sort))
+				->setDirection(array($dir))
+				->setColumns(array("id", "name", "url", "revision", "created", "last_modified", "references", "links"))));
+		}
+
+		$this->template->setChild($child);
+	}
+
 	public function admin() {
 		$this->template->addNavigation("System", "/wiki:admin");
 		$this->template->setTitle("System administration");
@@ -663,15 +744,19 @@ class WikiToolkit extends SpecialController {
 		$items = array();
 
 		if (\lib\CurrentUser::hasPriv("admin_users")) {
-			$items[] = new \view\AdminModule("Users", "/wiki:users");
+			$items[] = new \view\AdminModule("Users", "users", "/wiki:users");
 		}
 
 		if (\lib\CurrentUser::hasPriv("admin_groups")) {
-			$items[] = new \view\AdminModule("Groups", "/wiki:groups");
+			$items[] = new \view\AdminModule("Groups", "groups", "/wiki:groups");
 		}
 
 		if (\lib\CurrentUser::hasPriv("admin_superadmin")) {
-			$items[] = new \view\AdminModule("System config", "/wiki:config");
+			$items[] = new \view\AdminModule("System config", "system-config", "/wiki:config");
+		}
+
+		if (\lib\CurrentUser::hasPriv("admin_superadmin") || \lib\CurrentUser::hasPriv("acl_page_admin")) {
+			$items[] = new \view\AdminModule("Pages", "pages", "/wiki:pages");
 		}
 
 		$child->addVariable("Modules", $items);
@@ -688,7 +773,7 @@ class WikiToolkit extends SpecialController {
 class TemplateRenderObserver implements \lib\Observer {
 	public function notify(\lib\Observable $template) {
 		$adminAccessPrivList = array(
-			"admin_users", "admin_groups", "admin_superadmin"
+			"admin_users", "admin_groups", "admin_superadmin", "acl_page_admin"
 		);
 
 		$hasAdminAccess = false;

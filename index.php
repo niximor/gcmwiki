@@ -26,7 +26,7 @@ try {
 			} else {
 				$path = array();
 			}
-			
+
 			break;
 		}
 	}

@@ -12,7 +12,7 @@
     <dd>
         <ul>
             <?php foreach ($UserGroups as $Group) { ?>
-            <li><?php echo htmlspecialchars($Group->name); ?></li>
+            <li><?php echo "<a href=\"".$this->url("/wiki:groups?listUsers=".$Group->id)."\">".htmlspecialchars($Group->name)."</a>"; ?></li>
             <?php } ?>
         </ul>
 

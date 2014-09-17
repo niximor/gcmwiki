@@ -5,7 +5,12 @@ namespace models;
 require_once "models/Model.php";
 
 class User extends Model {
-    protected $id = 0;
+    const ANONYMOUS_ID = 0; /**< ID of anonymous user */
+
+    const STATUS_LIVE = 1;
+    const STATUS_BANNED = 2;
+
+    protected $id = self::ANONYMOUS_ID;
     protected $name;
     protected $email;
     protected $password;
@@ -20,10 +25,10 @@ class User extends Model {
     protected $password_token;
     protected $email_verified;
 
-    protected $privileges;
+    protected $show_comments;
+    protected $show_attachments;
 
-    const STATUS_LIVE = 1;
-    const STATUS_BANNED = 2;
+    protected $privileges;
 
     static function validatePassword(&$password) {
         $password = trim($password); // trim whitespace

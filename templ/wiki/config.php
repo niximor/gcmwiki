@@ -38,7 +38,7 @@
         </tbody>
     </table>
 
-    <div>
+    <div class="buttons">
         <input type="submit" value="Save" />
     </div>
 </form>

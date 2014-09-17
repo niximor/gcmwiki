@@ -21,7 +21,7 @@ class CurrentUser {
     }
 
     static function isLoggedIn() {
-        return self::i()->getId() > 0;
+        return self::i()->getId() > \models\User::ANONYMOUS_ID;
     }
 
     static function Verify($username, $password) {

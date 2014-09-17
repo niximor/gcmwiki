@@ -1,0 +1,64 @@
+<?php
+
+use \lib\libguess\Jpeg;
+
+class JpegTest extends \PHPUnit_Framework_TestCase {
+    protected $jpegFile;
+
+    public function setUp() {
+        $this->jpegFile = fopen("php://memory", "r+b");
+
+        // 1x1 JPEG file, source: http://uncyclopedia.wikia.com/wiki/File:1x1.JPG
+        fwrite($this->jpegFile, "\xff\xd8\xff\xe0\x00\x10\x4a\x46\x49\x46\x00\x01\x01\x01\x00\x60");
+        fwrite($this->jpegFile, "\x00\x60\x00\x00\xff\xdb\x00\x43\x00\x08\x06\x06\x07\x06\x05\x08");
+        fwrite($this->jpegFile, "\x07\x07\x07\x09\x09\x08\x0a\x0c\x14\x0d\x0c\x0b\x0b\x0c\x19\x12");
+        fwrite($this->jpegFile, "\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c\x20\x24\x2e\x27\x20");
+        fwrite($this->jpegFile, "\x22\x2c\x23\x1c\x1c\x28\x37\x29\x2c\x30\x31\x34\x34\x34\x1f\x27");
+        fwrite($this->jpegFile, "\x39\x3d\x38\x32\x3c\x2e\x33\x34\x32\xff\xdb\x00\x43\x01\x09\x09");
+        fwrite($this->jpegFile, "\x09\x0c\x0b\x0c\x18\x0d\x0d\x18\x32\x21\x1c\x21\x32\x32\x32\x32");
+        fwrite($this->jpegFile, "\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32");
+        fwrite($this->jpegFile, "\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32");
+        fwrite($this->jpegFile, "\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\x32\xff\xc0");
+        fwrite($this->jpegFile, "\x00\x11\x08\x00\x01\x00\x01\x03\x01\x22\x00\x02\x11\x01\x03\x11");
+        fwrite($this->jpegFile, "\x01\xff\xc4\x00\x15\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00");
+        fwrite($this->jpegFile, "\x00\x00\x00\x00\x00\x00\x00\x07\xff\xc4\x00\x14\x10\x01\x00\x00");
+        fwrite($this->jpegFile, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xc4");
+        fwrite($this->jpegFile, "\x00\x14\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
+        fwrite($this->jpegFile, "\x00\x00\x00\x00\xff\xc4\x00\x14\x11\x01\x00\x00\x00\x00\x00\x00");
+        fwrite($this->jpegFile, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01");
+        fwrite($this->jpegFile, "\x00\x02\x11\x03\x11\x00\x3f\x00\xbf\x80\x0f\xff\xd9");
+
+        fseek($this->jpegFile, 0, SEEK_SET);
+
+        require_once "lib/libguess/image.php";
+    }
+
+    public function tearDown() {
+        fclose($this->jpegFile);
+    }
+
+    public function testDetect() {
+        $jpg = new Jpeg();
+        $this->assertTrue($jpg->isMatch($this->jpegFile));
+    }
+
+    /**
+     * @depends testDetect
+     */
+    public function testWidth() {
+        $jpg = new Jpeg();
+        $jpg->isMatch($this->jpegFile);
+
+        $this->assertEquals(1, $jpg->getWidth());
+    }
+
+    /**
+     * @depends testDetect
+     */
+    public function testHeight() {
+        $jpg = new Jpeg();
+        $jpg->isMatch($this->jpegFile);
+
+        $this->assertEquals(1, $jpg->getHeight());
+    }
+}

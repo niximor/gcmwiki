@@ -90,7 +90,7 @@ class Image extends InlineTrigger {
         }
 
         $class = array("image");
-        
+
         if (isset($caption) && !empty($caption)) {
             $class[] = "withCaption";
         }

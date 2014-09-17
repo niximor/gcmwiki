@@ -23,14 +23,31 @@ if (file_exists($config_dir."site-specific.config.php")) {
 	include $config_dir."site-specific.config.php";
 }
 
+function import($class) {
+    $class = preg_replace("/\\./", "\\\\", $class);
+    if (substr($class, 0, 1) == "\\") $class = substr($class, 1);
+    if (empty($class)) return;
+
+    $file = str_replace("\\", "/", $class).".php";
+    require_once $file;
+}
+
 // Storage class
 $backend = Config::Get("Backend");
 if (is_null($backend)) {
 	throw new RuntimeException("No backend configured.");
 }
-require_once("storage/".$backend.".php");
-$backend = "\\storage\\".$backend;
+
+import($backend);
 Config::Set("__Backend", $be = new $backend());
+
+$storageBackend = Config::Get("StorageBackend");
+if (is_null($storageBackend)) {
+    throw new RuntimeException("StorageBackend is not configured.");
+}
+
+import($storageBackend);
+Config::Set("__Storage", new $storageBackend());
 
 \lib\Session::setStorage($be->getSessionStorage());
 \lib\Session::setLifeTime(3600);

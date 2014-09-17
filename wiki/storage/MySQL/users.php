@@ -13,7 +13,7 @@ class Users extends Module {
         }
 
         $columns = array_merge(
-            array("id", "name", "email", "registered", "last_login", "email_verified"),
+            array("id", "name", "email", "registered", "last_login", "email_verified", "show_comments", "show_attachments"),
             $columns
         );
 
@@ -96,7 +96,7 @@ class Users extends Module {
     public function storeUserInfo(\models\User $user) {
         $trans = $this->base->db->beginRW();
 
-        $diag = new Diagnostics();
+        $diag = new \storage\Diagnostics();
 
         // Test for user already exists.
         if ($user->getId()) {
@@ -115,6 +115,13 @@ class Users extends Module {
 
         if (isset($res) && $res->valid()) {
             $diag->addError("name", "user_already_exists", "User with selected name already exists.");
+        }
+
+        if ($user->isChanged("email")) {
+            $email = $user->getEmail();
+            if (!preg_match('/^[a-zA-Z0-9.!#$%&\'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/', $email)) {
+                $diag->addError("email", "email_is_invalid", "Specified email address is not valid.");
+            }
         }
 
         if ($diag->getErrors()) {
@@ -498,21 +505,22 @@ class Users extends Module {
     public function storeGroupInfo(\models\Group $group) {
         $trans = $this->base->db->beginRW();
 
-        $diag = new Diagnostics();
+        $diag = new \storage\Diagnostics();
 
         if ($group->getId()) {
             if ($group->isChanged("name")) {
                 $res = $trans->query("SELECT id FROM groups WHERE name = %s AND id <> %s", $group->getName(), $group->getId());
             }
         } else {
-            if (empty($group->getName())) {
+            $name = $group->getName();
+            if (empty($name)) {
                 $diag->addError("name", "name_must_be_present", "Group name must be present.");
             } else {
-                $res = $trans->query("SELECT id FROM groups WHERE name = %s", $group->getName());
+                $res = $trans->query("SELECT id FROM groups WHERE name = %s", $name);
             }
         }
 
-        if ($res && $res->valid()) {
+        if (isset($res) && $res->valid()) {
             $diag->addError("name", "name_already_exists", "Group with given name already exists.");
         }
 
@@ -560,7 +568,10 @@ class Users extends Module {
                 NULL AS user_id,
                 NULL AS group_id,
                 sp.default_value AS value
-            FROM system_privileges sp WHERE id = %s
+            FROM system_privileges sp
+            WHERE
+                id = %s AND
+                sp.default_value = 1
 
             UNION
 
@@ -571,6 +582,7 @@ class Users extends Module {
                 spg.value
             FROM user_group ug
             JOIN system_privileges_group spg ON (spg.group_id = ug.group_id AND spg.privilege_id = %s)
+            WHERE spg.value = 1
 
             UNION
 
@@ -579,7 +591,10 @@ class Users extends Module {
                 spu.user_id,
                 NULL AS group_id,
                 spu.value AS value
-            FROM system_privileges_user spu WHERE spu.privilege_id = %s",
+            FROM system_privileges_user spu
+            WHERE
+                spu.privilege_id = %s
+                AND spu.value = 1",
             $privilege->getId(), $privilege->getId(), $privilege->getId());
 
         $map = array();
@@ -621,7 +636,7 @@ class Users extends Module {
                 $strings[] = "%s";
                 $values[] = $gId;
             }
-            
+
             $res = $trans->query("SELECT id, name FROM groups WHERE id IN (".implode(", ", $strings).")", $values);
             $res->setClassFactory("\\models\\Group");
             foreach ($res as $row) {

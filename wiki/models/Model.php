@@ -2,32 +2,10 @@
 
 namespace models;
 
-class Model {
+require_once "lib/Object.php";
+
+class Model extends \lib\Object {
     protected $_changed = array();
-
-    private static function methodToProperty($name) {
-        if (!empty($name)) {
-            return strtolower($name[0]).substr($name, 1);
-        } else {
-            return $name;
-        }
-    }
-
-    public function __call($method, $args) {
-        if (strpos($method, "get") === 0) {
-            $item = self::methodToProperty(substr($method, 3));
-            return $this->__get($item);
-        } elseif (strpos($method, "set") === 0) {
-            if (count($args) == 1) {
-                $item = self::methodToProperty(substr($method, 3));
-                $this->__set($item, $args[0]);
-            } else {
-                trigger_error("Method ".get_class($this)."::".$method." takes exactly one argument.", E_USER_ERROR);
-            }
-        } else {
-            trigger_error("Trying to call non-existing method ".$method." of object of class ".get_class($this), E_USER_ERROR);
-        }
-    }
 
     public function __get($name) {
         if ($name && $name[0] != '_' && property_exists($this, $name)) {
@@ -83,4 +61,3 @@ class Model {
         }
     }
 }
-

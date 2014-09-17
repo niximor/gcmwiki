@@ -35,6 +35,7 @@
 	</div>
 
 	<div class="buttons">
-		<input type="submit" value="Post" /> <a href="<?php echo $this->url($this->getSelf(), -1); ?>">Cancel</a>
+		<input type="submit" value="Post" />
+		<a href="<?php echo $this->url($this->getSelf(), -1); ?>">Cancel</a>
 	</div>
 </form>

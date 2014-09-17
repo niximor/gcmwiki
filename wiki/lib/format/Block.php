@@ -8,7 +8,7 @@ class PlainText extends InlineTrigger {
     function getRegExp(Context $ctx) {
         return '/{{{(.*?)}}}/';
     }
-    
+
     function callback(Context $ctx, $matches) {
         $ctx->generate(htmlspecialchars($matches[1]));
     }
@@ -24,7 +24,7 @@ class BlockContext extends Context {
 
 class Block extends LineTrigger {
     protected $blocks = array();
-    
+
     public function registerBlockFormatter($name, $callback) {
         if (!isset($this->blocks[$name])) {
             if (is_callable($callback)) {
@@ -40,11 +40,11 @@ class Block extends LineTrigger {
     function getRegExp(Context $ctx) {
         return '/^\s*{{{(?!.*}}})(.*?)$|^\s*{{{(.*?)}}}$/';
     }
-    
+
     function getEndRegExp(Context $ctx) {
         return $ctx->endRe;
     }
-    
+
     function getContext(Context $parent, $line, $matches) {
         $ctx = new BlockContext($parent, $this);
         if (isset($matches[1]) && !empty($matches[1])) {
@@ -54,7 +54,7 @@ class Block extends LineTrigger {
         }
         return $ctx;
     }
-    
+
     function callLine(Context $ctx, $line, $matches) {
         if (!$ctx->isFirstLine && strpos($line, '{{{') !== false) {
             ++$ctx->inheritanceLevel;
@@ -71,7 +71,7 @@ class Block extends LineTrigger {
             $ctx->isFirstLine = false;
         }
     }
-    
+
     function callEnd(Context $ctx) {
         if ($ctx->firstline == "") {
             $ctx->generateHTML("\n<pre>");
@@ -90,7 +90,7 @@ class Block extends LineTrigger {
             }
         }
     }
-    
+
     static function testSuite(\lib\formatter\WikiFormatter $f) {
         self::testFormat($f, "{{{
 this is raw escaped block
@@ -106,8 +106,8 @@ some c++ code
 <pre>this is raw escaped block</pre>
 
 <p>
-aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa 
-after must get formatted too. 
+aaa preformatted text that **does** not get wiki formatted bbb not //formatted// textaaa
+after must get formatted too.
 </p>
 
 <pre>code:c++

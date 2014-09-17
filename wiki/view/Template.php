@@ -75,11 +75,23 @@ class Template implements \lib\Observable {
 		}
 	}
 
+	function getParent() {
+		return $this->parent;
+	}
+
 	function setTitle($title) {
 		if (!is_null($this->parent)) {
 			$this->parent->setTitle($title);
 		} else {
 			$this->variables["Title"] = $title;
+		}
+	}
+
+	function getTitle() {
+		if (!is_null($this->parent)) {
+			return $this->parent->getTitle();
+		} else {
+			return $this->variables["Title"];
 		}
 	}
 
@@ -100,6 +112,18 @@ class Template implements \lib\Observable {
 				$this->variables["BottomNavigation"][] = new PageAction($name, $this->url($url));
 			} else {
 				$this->variables["Navigation"][] = new PageAction($name, $this->url($url));
+			}
+		}
+	}
+
+	function prependNavigation($name, $url, $bottom = false) {
+		if (!is_null($this->parent)) {
+			$this->parent->prependNavigation($name, $this->url($url), $bottom);
+		} else {
+			if ($bottom) {
+				array_unshift($this->variables["BottomNavigation"], new PageAction($name, $this->url($url)));
+			} else {
+				array_unshift($this->variables["Navigation"], new PageAction($name, $this->url($url)));
 			}
 		}
 	}

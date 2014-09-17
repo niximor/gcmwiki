@@ -1,10 +1,10 @@
 <h1>Administration</h1>
 
-<ul>
+<ul class="admin">
 <?php
     foreach ($Modules as $Module) {
 ?>
-    <li><a href="<?php echo htmlspecialchars($this->url($Module->url)); ?>"><?php echo htmlspecialchars($Module->name); ?></a></li>
+    <li class="<?php echo $Module->id; ?>"><a href="<?php echo htmlspecialchars($this->url($Module->url)); ?>"><span><?php echo htmlspecialchars($Module->name); ?></span></a></li>
 <?php
     }
 ?>

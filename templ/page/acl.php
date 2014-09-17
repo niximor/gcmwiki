@@ -1,4 +1,18 @@
-<h1>ACLs of page <?php echo htmlspecialchars($Page->getName()); ?></h1>
+<?php
+
+$pp = function($page) use (&$pp) {
+    if (is_null($page)) return;
+
+    $parent = $pp($page->getParent());
+    if (!empty($parent)) {
+        return $parent." / ".htmlspecialchars($page->getName());
+    } else {
+        return htmlspecialchars($page->getName());
+    }
+};
+
+?>
+<h1>ACLs of page <?php echo $pp($Page); ?></h1>
 
 <form action="<?php echo $this->url($this->getSelf()); ?>?saveAcl" method="post">
 
@@ -12,28 +26,34 @@ function select($name, $value) {
 	echo "</select>";
 }
 
+$names = array(
+	"page_read" => "Read",
+	"page_write" => "Write",
+	"page_admin" => "Admin",
+	"comment_read" => "Comment read",
+	"comment_write" => "Comment write",
+	"comment_admin" => "Comment admin",
+	"attachment_write" => "Attach files",
+);
+
 ?>
 <div>
 	<table class="nofull">
 		<thead>
 			<tr>
 				<th class="acl_name">User / Group</th>
-				<th class="acl page_read">Read</th>
-				<th class="acl page_write">Write</th>
-				<th class="acl page_admin">Admin</th>
-				<th class="acl comment_read">Comment read</th>
-				<th class="acl comment_write">Comment write</th>
+				<?php foreach ($Acls as $name) { ?>
+					<th class="acl <?php echo $name; ?>"><?php echo isset($names[$name])?$names[$name]:$name; ?></th>
+				<?php } ?>
 			</tr>
 		</thead>
 
 		<tbody>
 			<tr>
 				<td class="acl_name">Default ACL</td>
-				<td class="acl page_read"><?php select("default[read]", $PageAcls->default->page_read); ?></td>
-				<td class="acl page_write"><?php select("default[write]", $PageAcls->default->page_write); ?></td>
-				<td class="acl page_admin"><?php select("default[admin]", $PageAcls->default->page_admin); ?></td>
-				<td class="acl comment_read"><?php select("default[comment_read]", $PageAcls->default->comment_read); ?></td>
-				<td class="acl comment_write"><?php select("default[comment_write]", $PageAcls->default->comment_write); ?></td>
+				<?php foreach ($Acls as $name) { ?>
+				<td class="acl <?php echo $name; ?>"><?php select("default[".$name."]", $PageAcls->default->$name); ?></td>
+				<?php } ?>
 			</tr>
 		</tbody>
 
@@ -51,11 +71,9 @@ function select($name, $value) {
 ?>
 			<tr>
 				<td class="acl_name"><?php echo $acl->name; ?></td>
-				<td class="acl page_read"><?php select("group[".$acl->id."][read]", $acl->page_read); ?></td>
-				<td class="acl page_write"><?php select("group[".$acl->id."][write]", $acl->page_write); ?></td>
-				<td class="acl page_admin"><?php select("group[".$acl->id."][admin]", $acl->page_admin); ?></td>
-				<td class="acl comment_read"><?php select("group[".$acl->id."][comment_read]", $acl->comment_read); ?></td>
-				<td class="acl comment_write"><?php select("group[".$acl->id."][comment_write]", $acl->comment_write); ?></td>
+				<?php foreach ($Acls as $name) { ?>
+				<td class="acl <?php echo $name; ?>"><?php select("group[".$acl->id."][".$name."]", $acl->$name); ?></td>
+				<?php } ?>
 			</tr>
 <?php
 	}
@@ -91,11 +109,9 @@ function select($name, $value) {
 ?>
 			<tr>
 				<td class="acl_name"><?php echo $acl->name; ?></td>
-				<td class="acl page_read"><?php select("user[".$acl->id."][read]", $acl->page_read); ?></td>
-				<td class="acl page_write"><?php select("user[".$acl->id."][write]", $acl->page_write); ?></td>
-				<td class="acl page_admin"><?php select("user[".$acl->id."][admin]", $acl->page_admin); ?></td>
-				<td class="acl comment_read"><?php select("user[".$acl->id."][comment_read]", $acl->comment_read); ?></td>
-				<td class="acl comment_write"><?php select("user[".$acl->id."][comment_write]", $acl->comment_write); ?></td>
+				<?php foreach ($Acls as $name) { ?>
+				<td class="acl <?php echo $name; ?>"><?php select("user[".$acl->id."][".$name."]", $acl->$name); ?></td>
+				<?php } ?>
 			</tr>
 <?php
 	}
@@ -128,9 +144,9 @@ function select($name, $value) {
 var btnUser = document.getElementById("btnAddUser");
 var btnGroup = document.getElementById("btnAddGroup");
 
-function createTd(name, acl, className) {
+function createTd(name, acl) {
 	var td = document.createElement("td");
-	td.className = "acl " + className;
+	td.className = "acl " + acl;
 
 	var select = document.createElement("select");
 	select.name = name + "[" + acl + "]";
@@ -161,18 +177,16 @@ function createTd(name, acl, className) {
 
 function addRow(parent, name, label) {
 	var tds = [];
-	tds.push(createTd(name, "read", "page_read"));
-	tds.push(createTd(name, "write", "page_write"));
-	tds.push(createTd(name, "admin", "page_admin"));
-	tds.push(createTd(name, "comment_read", "comment_read"));
-	tds.push(createTd(name, "comment_write", "comment_write"));
+	<?php foreach ($Acls as $name) { ?>
+	tds.push(createTd(name, "<?php echo addcslashes($name, "\r\n\t\""); ?>"));
+	<?php } ?>
 
 	var trs = parent.getElementsByTagName("tr");
 
 	var tdLabel = document.createElement("td");
 	tdLabel.className = "acl_name";
 	tdLabel.innerHTML = label;
-	
+
 	var tr = document.createElement("tr");
 	tr.appendChild(tdLabel);
 
@@ -194,7 +208,7 @@ btnUser.onclick = function() {
 btnGroup.onclick = function() {
 	option = this.form.groupId.selectedOptions;
 
-	if (option.length > 0) {	
+	if (option.length > 0) {
 		addRow(document.getElementById("groups"), "group[" + option[0].value.toString() + "]", option[0].text);
 	}
 }

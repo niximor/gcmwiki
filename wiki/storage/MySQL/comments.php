@@ -8,7 +8,7 @@ class Comments extends Module {
     public function storeComment(\models\Comment $comment) {
         $trans = $this->base->db->beginRW();
 
-        $diag = new Diagnostics();
+        $diag = new \storage\Diagnostics();
 
         // Try if there is no registered user of the same name
         if (!is_null($comment->anonymous_name)) {
@@ -39,16 +39,30 @@ class Comments extends Module {
         }
 
         if (!is_null($comment->getId())) {
-            $trans->query("INSERT INTO comments_history (comment_id, revision, last_modified, user_id,      ip, text_wiki)
-                            SELECT                       id,         revision, last_modified, edit_user_id, ip, text_wiki)
-                            FROM comments WHERE id = %s", $comment->getId());
+            $needHistoryEntry = false;
+            foreach ($comment->listChanged() as $col) {
+                if (in_array($col, array("text_wiki", "revision"))) {
+                    $needHistoryEntry = true;
+                    break;
+                }
+            }
+
+            if ($needHistoryEntry) {
+                $trans->query("INSERT INTO comments_history (comment_id, revision, last_modified, user_id,                               ip, text_wiki)
+                                SELECT                       id,         revision, last_modified, COALESCE(edit_user_id, owner_user_id), ip, text_wiki
+                                FROM comments WHERE id = %s", $comment->getId());
+            }
 
             $vals = array();
             $cols = array();
 
-            foreach ($comment->listChanged as $col) {
+            foreach ($comment->listChanged() as $col) {
                 $cols[] = $col." = %s";
                 $vals[] = $comment->$col;
+            }
+
+            if ($comment->isChanged("text_wiki")) {
+                $this->formatCommentText($comment, $trans);
             }
 
             $cols[] = "ip = %s";
@@ -70,10 +84,10 @@ class Comments extends Module {
         $trans->commit();
     }
 
-    protected function formatCommentText(\models\Comment $comment) {
+    protected function formatCommentText(\models\Comment $comment, \drivers\mysql\Transaction $trans = NULL) {
         $f = new \lib\formatter\WikiFormatterSimple();
         $comment->text_html = $f->format($comment->text_wiki, $comment->getPage());
-        $this->base->cache->storeWikiCache("comment-".$comment->id."-".$comment->revision, $comment->text_html);
+        $this->base->cache->storeWikiCache("comment-".$comment->id."-".$comment->revision, $comment->text_html, $trans);
 
         // Store links
         $root = $f->getRootContext();
@@ -95,10 +109,18 @@ class Comments extends Module {
             }
 
             if (!empty($ins)) {
-                $trans = $this->base->db->beginRW();
+                $transactionStarted = false;
+                if (is_null($trans)) {
+                    $trans = $this->base->db->beginRW();
+                    $transactionStarted = true;
+                }
+
                 $query .= implode(", ", $ins);
                 $trans->query($query, $vals);
-                $trans->commit();
+
+                if ($transactionStarted) {
+                    $trans->commit();
+                }
             }
         }
     }
@@ -107,13 +129,13 @@ class Comments extends Module {
         $trans = $this->base->db->beginRO();
 
         $res = $trans->query("SELECT c.id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
-            c.ip, c.parent_id, c.created, c.last_modified, c.text_wiki, cache.wiki_text AS text_html,
+            c.ip, c.parent_id, c.created, c.last_modified, c.hidden, c.text_wiki, cache.wiki_text AS text_html,
             uo.name AS owner_user_name, ue.name AS edit_user_name
             FROM comments c
             LEFT JOIN users uo ON (c.owner_user_id = uo.id)
             LEFT JOIN users ue ON (c.edit_user_id = ue.id)
             LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('comment-', c.id, '-', c.revision) AND cache.valid = 1)
-            WHERE page_id = %s", $page->getId());
+            WHERE c.page_id = %s AND c.hidden = 0 AND c.approved = 1", $page->getId());
 
         // Build comments hierarchy
         $comments = array();
@@ -139,6 +161,14 @@ class Comments extends Module {
                 $comment->OwnerUser->ip = $row->ip;
             }
 
+            if (!is_null($row->edit_user_id)) {
+                $comment->EditUser = new \models\User;
+                $comment->EditUser->id = $row->edit_user_id;
+                $comment->EditUser->name = $row->edit_user_name;
+            } else {
+                $comment->EditUser = NULL;
+            }
+
             $comment->created = $row->created;
             $comment->last_modified = $row->last_modified;
             if (is_null($row->text_html)) {
@@ -155,7 +185,7 @@ class Comments extends Module {
 
         foreach ($comments as $parent=>&$childs) {
             if (empty($parent)) $parent = NULL;
-            if (!is_null($parent)) {
+            if (!is_null($parent) && isset($comments_by_id[$parent])) {
                 $comments_by_id[$parent]->childs = &$childs;
             }
         }
@@ -169,11 +199,11 @@ class Comments extends Module {
         }
     }
 
-    public function loadComment($commentId) {
+    public function loadComment($commentId, $withHistory = false) {
         $trans = $this->base->db->beginRO();
 
         $res = $trans->query("SELECT c.id, c.page_id, c.revision, c.owner_user_id, c.edit_user_id, c.anonymous_name,
-            c.ip, c.created, c.last_modified, c.text_wiki, cache.wiki_text AS text_html,
+            c.ip, c.created, c.hidden, c.last_modified, c.text_wiki, cache.wiki_text AS text_html,
             uo.name AS owner_user_name, ue.name AS edit_user_name
             FROM comments c
             LEFT JOIN users uo ON (c.owner_user_id = uo.id)
@@ -198,16 +228,64 @@ class Comments extends Module {
             $comment->OwnerUser->ip = $row->ip;
         }
 
+        if (!is_null($row->edit_user_id)) {
+            $comment->EditUser = new \models\User;
+            $comment->EditUser->id = $row->edit_user_id;
+            $comment->EditUser->name = $row->edit_user_name;
+        } else {
+            $comment->EditUser = NULL;
+        }
+
         $comment->created = $row->created;
         $comment->last_modified = $row->last_modified;
+        $comment->text_wiki = $row->text_wiki;
+
         if (is_null($row->text_html)) {
-            $comment->text_wiki = $row->text_wiki;
             $this->formatCommentText($comment);
         } else {
             $comment->text_html = $row->text_html;
         }
 
         $comment->clearChanged();
+
+        if ($withHistory) {
+            $res = $trans->query("SELECT
+                    ch.comment_id,
+                    ch.revision,
+                    ch.last_modified,
+                    ch.user_id,
+                    u.name AS user_name,
+                    ch.ip,
+                    ch.text_wiki,
+                    txt.wiki_text AS text_html
+                FROM comments_history ch
+                JOIN users u ON (ch.user_id = u.id)
+                LEFT JOIN wiki_text_cache txt ON (txt.key = CONCAT('comment-', ch.comment_id, '-', ch.revision) AND txt.valid = 1)
+                WHERE ch.comment_id = %s
+                ORDER BY ch.last_modified DESC", $comment->getId());
+
+            $comment->History = array();
+            foreach ($res as $row) {
+                $com = new \models\Comment;
+
+                $com->id = $row->comment_id;
+                $com->revision = $row->revision;
+                $com->last_modified = $row->last_modified;
+                $com->text_wiki = $row->text_wiki;
+
+                if (is_null($row->text_html)) {
+                    $this->formatCommentText($com);
+                } else {
+                    $com->text_html = $row->text_html;
+                }
+
+                $com->EditUser = new \models\User;
+                $com->EditUser->id = $row->user_id;
+                $com->EditUser->name = $row->user_name;
+
+                $comment->History[] = $com;
+            }
+        }
 
         $trans->commit();
 

@@ -30,9 +30,9 @@ class Config {
 
 	public function link() {
 		if (!$this->connected) {
-			$this->link = new \mysqli($this->host, $this->user, $this->password, $this->database);
-			if ($this->link->error) {
-				throw new ConnectException($this->link);
+			$this->link = @new \mysqli($this->host, $this->user, $this->password, $this->database);
+			if ($this->link->connect_error) {
+				throw new ConnectException($this->link, $this->getConnectionString());
 			}
 
 			$this->link->autocommit = false;
@@ -51,9 +51,13 @@ class Config {
 		return $this->inTransaction;
 	}
 
+	public function getConnectionString() {
+		return $this->database."@".$this->host;
+	}
+
 	public function begin() {
 		if ($this->isInTransaction()) {
-			throw new Exception("Transaction already opened.");
+			throw new Exception("Transaction already opened.", $this->getConnectionString());
 		}
 
 		$link = $this->link();
@@ -68,7 +72,7 @@ class Config {
 
 	public function commit() {
 		if (!$this->isInTransaction()) {
-			throw new Exception("Unable to commit. No transaction opened.");
+			throw new Exception("Unable to commit. No transaction opened.", $this->getConnectionString());
 		}
 
 		$this->link()->commit();
@@ -77,7 +81,7 @@ class Config {
 
 	public function rollback() {
 		if (!$this->isInTransaction()) {
-			throw new Exception("Unable to rollback. No transaction opened.");
+			throw new Exception("Unable to rollback. No transaction opened.", $this->getConnectionString());
 		}
 
 		$this->link()->rollback();
@@ -173,7 +177,7 @@ class Transaction {
 
 	function query($query) {
 		if (!$this->config->isInTransaction()) {
-			throw new Exception("No transaction open.");
+			throw new Exception("No transaction open.", $this->config->getConnectionString());
 		}
 
 		$link = $this->config->link();
@@ -190,15 +194,14 @@ class Transaction {
 			$queryBefore = $query;
 			$query = @call_user_func_array("sprintf", $args);
 			if (!$query) {
-				throw new QueryException("Not all arguments in format string got converted.", $queryBefore);
+				throw new QueryException("Not all arguments in format string got converted.", $queryBefore, $this->config->getConnectionString());
 			}
 		}
 
-		//echo $query."<br />";
-
+		//echo "QUERY: ".$query."<br />\n";
 		$result = $link->query($query);
 		if ($link->errno != 0) {
-			throw new QueryException($link, $query);
+			throw new QueryException($link, $query, $this->config->getConnectionString());
 		}
 
 		if (is_object($result) && $result instanceof \mysqli_result) {

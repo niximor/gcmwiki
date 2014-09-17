@@ -10,19 +10,23 @@ class WikiAcl extends Model {
 	protected $page_admin;
 	protected $comment_read;
 	protected $comment_write;
+	protected $comment_admin;
+	protected $attachment_write;
 
 	function __construct() {
-		$this->_ensureBool($this->page_read);
-		$this->_ensureBool($this->page_write);
-		$this->_ensureBool($this->page_admin);
-		$this->_ensureBool($this->comment_read);
-		$this->_ensureBool($this->comment_write);
+		foreach (self::listAcls() as $name) {
+			$this->_ensureBool($this->$name);
+		}
 	}
 
 	protected function _ensureBool(&$value) {
 		if ($value == "1") $value = true;
 		elseif ($value == "0") $value = false;
 		elseif ($value == "-1") $value = NULL;
+	}
+
+	public static function listAcls() {
+		return array("page_read", "page_write", "page_admin", "comment_read", "comment_write", "comment_admin", "attachment_write");
 	}
 }
 

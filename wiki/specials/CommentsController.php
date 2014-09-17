@@ -8,12 +8,9 @@ require_once "models/Comment.php";
 
 class CommentsController extends SpecialController {
 	function add() {
-		if (is_null($this->relatedPage)) {
-			throw new \view\NotFound();
-		}
+		$this->ensurePageContext();
 
 		$be = $this->getBackend();
-		$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 		if (!$this->Acl->comment_write) {
 			throw new \view\AccessDenided();
@@ -37,16 +34,17 @@ class CommentsController extends SpecialController {
 		if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$item = new \models\Comment;
 			if (\lib\CurrentUser::isLoggedIn()) {
-				$item->owner_user_id = $item->edit_user_id = \lib\CurrentUser::ID();
+				$item->owner_user_id = \lib\CurrentUser::ID();
 			} else {
-				$item->owner_user_id = $item->edit_user_id = NULL;
+				$item->owner_user_id = NULL;
 				if (isset($_POST["username"]) && !empty($_POST["username"])) {
 					$item->anonymous_name = $_POST["username"];
 				}
 			}
 
 			$item->page_id = $this->relatedPage->id;
-			$item->revision = $this->relatedPage->revision;
+			$item->revision = 1;
+			$item->approved = 1; // TODO: This must be user-dependant
 
 			if (isset($comment)) {
 				$item->parent_id = $comment->getId();
@@ -56,15 +54,15 @@ class CommentsController extends SpecialController {
 
 			try {
 				$be->storeComment($item);
+				\view\Messages::Add("Comment has been added.", \view\Message::Success);
+				$this->template->redirect("/".$this->relatedPage->getFullUrl());
 			} catch (\storage\Diagnostics $e) {
 				\lib\Session::Set("Form", $_POST);
 				\lib\Session::Set("Errors", $e->getErrorsForFields());
+				$this->template->redirect($this->template->getSelf());
 			}
-
-			// TODO: Redirect to wiki page after adding comment.
-			$this->template->redirect($this->template->getSelf());
 		}
-	
+
 		$child->addVariable("Page", $this->relatedPage);
 		$child->addVariable("Acl", $this->Acl);
 		$child->addVariable("Form", (array)\lib\Session::Get("Form"));
@@ -74,9 +72,108 @@ class CommentsController extends SpecialController {
 		\lib\Session::Set("Form", NULL);
 		\lib\Session::Set("Errors", NULL);
 
-		$this->addPageLinks();
 		$this->template->addNavigation("Add comment", $this->template->getSelf());
-		$this->addPageActions();
+	}
+
+	function edit() {
+		$this->ensurePageContext();
+
+		$be = $this->getBackend();
+
+		// Comment id is mandatory.
+		if (!isset($_REQUEST["id"])) {
+			throw new \view\NotFound();
+		}
+
+		// Load comment.
+		$comment = $be->loadComment($_REQUEST["id"]);
+
+		// The comment must be for page that is currently opened.
+		if ($comment->getPage_id() != $this->relatedPage->getId()) {
+			throw new \view\NotFound();
+		}
+
+		// If user does not have privilege to edit comment, refuse it.
+		if (!($this->Acl->comment_admin || ($this->Acl->comment_write && \lib\CurrentUser::isLoggedIn() && $comment->OwnerUser->getId() == \lib\CurrentUser::ID()))) {
+			throw new \view\AccessDenided();
+		}
+
+		if ($_SERVER["REQUEST_METHOD"] == "POST") {
+			$comment->updateText($_POST["text"]);
+			$comment->edit_user_id = \lib\CurrentUser::ID();
+			$comment->revision++;
+
+			try {
+				$be->storeComment($comment);
+				\view\Messages::Add("Comment has been edited.", \view\Message::Success);
+				$this->template->redirect("/".$this->relatedPage->getFullUrl());
+			} catch (\storage\Diagnostics $e) {
+				\lib\Session::Set("Form", $_POST);
+				\lib\Session::Set("Errors", $e->getErrorsForFields());
+				$this->template->redirect($this->template->getSelf()."?id=".$comment->getId());
+			}
+		}
+
+		$child = new \view\Template("comments/edit.php");
+		$child->addVariable("Comment", $comment);
+		$child->addVariable("Form", (array)\lib\Session::Get("Form"));
+		$child->addVariable("Errors", (array)\lib\Session::Get("Errors"));
+
+		$this->template->setChild($child);
+		$this->template->addNavigation("Edit comment", $this->template->getSelf());
+	}
+
+	function hide() {
+		$this->ensurePageContext();
+
+		$be = $this->getBackend();
+
+		if (!isset($_REQUEST["id"])) {
+			throw new \view\NotFound();
+		}
+
+		$comment = $be->loadComment($_REQUEST["id"]);
+
+		if ($comment->getPage_id() != $this->relatedPage->getId()) {
+			throw new \view\NotFound();
+		}
+
+		if (!($this->Acl->comment_admin || ($this->Acl->comment_write && \lib\CurrentUser::isLoggedIn() && $comment->OwnerUser->getId() == \lib\CurrentUser::ID()))) {
+			throw new \view\AccessDenided();
+		}
+
+		$comment->hidden = true;
+
+		$be->storeComment($comment);
+		\view\Messages::Add("Comment has been hidden.", \view\Message::Success);
+
+		$this->template->redirect("/".$this->relatedPage->getFullUrl());
+	}
+
+	function history() {
+		$this->ensurePageContext();
+
+		$be = $this->getBackend();
+
+		if (!isset($_REQUEST["id"])) {
+			throw new \view\NotFound();
+		}
+
+		$comment = $be->loadComment($_REQUEST["id"], true);
+
+		if ($comment->getPage_id() != $this->relatedPage->getId()) {
+			throw new \view\NotFound();
+		}
+
+		if (!$this->Acl->comment_read) {
+			throw new \view\AccessDenided();
+		}
+
+		$child = new \view\Template("comments/history.php");
+		$child->addVariable("Comment", $comment);
+
+		$this->template->setChild($child);
+		$this->template->addNavigation("Comment history", $this->template->getSelf()."?id=".$comment->getId());
 	}
 }
 

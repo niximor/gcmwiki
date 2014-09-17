@@ -12,6 +12,16 @@
     </div>
 
     <div>
+        <label for="show_comments">Show comments:</label>
+        <input type="checkbox" name="show_comments"<?php if ($User->getShowComments()) echo " checked"; ?> />
+    </div>
+
+    <div>
+        <label for="show_attachments">Show attachments:</label>
+        <input type="checkbox" name="show_attachments"<?php if ($User->getShowAttachments()) echo " checked"; ?> />
+    </div>
+
+    <div>
         <a href="<?php echo $this->url("/wiki:change_password"); ?>">Change password</a>
     </div>
 

@@ -15,13 +15,17 @@ class Pages extends Module {
         // Store page links
         $root = $f->getRootContext();
         if (isset($root->WIKI_LINKS) && is_array($root->WIKI_LINKS)) {
-            $query = "INSERT INTO wiki_page_references (wiki_page_id, ref_page_id, ref_page_name) VALUES ";
+            $links = array_unique($root->WIKI_LINKS, SORT_REGULAR);
+
+            $query = "INSERT INTO wiki_page_references (wiki_page_id, wiki_page_revision, ref_page_id, ref_page_name) VALUES ";
             $ins = array();
             $vals = array();
 
-            foreach ($root->WIKI_LINKS as $link) {
-                $ins[] = "(%s, %s, %s)";
+            foreach ($links as $link) {
+                $ins[] = "(%s, %s, %s, %s)";
                 $vals[] = $page->getId();
+                $vals[] = $page->getRevision();
+
                 if (is_int($link)) {
                     $vals[] = $link;
                     $vals[] = NULL;
@@ -31,6 +35,8 @@ class Pages extends Module {
                 }
             }
 
+            $query .= implode(", ", $ins);
+
             if (!empty($ins)) {
                 $transactionStarted = false;
                 if ($this->base->currentTransaction) {
@@ -39,12 +45,29 @@ class Pages extends Module {
                     $trans = $this->base->db->beginRW();
                     $transactionStarted = true;
                 }
-                $query .= implode(", ", $ins);
+
+                $trans->query("DELETE FROM wiki_page_references WHERE wiki_page_id = %s AND wiki_page_revision = %s", $page->getId(), $page->getRevision());
                 $trans->query($query, $vals);
 
                 if ($transactionStarted) {
                     $trans->commit();
                 }
+            }
+        }
+    }
+
+    protected function constructPageWhere($parent, $urlName, $followRedirect, $idColumn) {
+        if ($followRedirect) {
+            if (is_null($parent)) {
+                return array($idColumn." = GET_PAGE_ID(%s, NULL)", array($urlName));
+            } else {
+                return array($idColumn." = GET_PAGE_ID(%s, %s)", array($urlName, $parent->getId()));
+            }
+        } else {
+            if (is_null($parent)) {
+                return array("p.url = %s AND p.parent_id IS NULL", array($urlName));
+            } else {
+                return array("p.url = %s AND p.parent_id = %s", array($urlName, $parent->getId()));
             }
         }
     }
@@ -72,112 +95,30 @@ class Pages extends Module {
 
         $part_len = count($path);
         $lastPart = false;
+        $currentRev = NULL;
+
         for ($i = 0; $i < $part_len; ++$i) {
             $part = $path[$i];
 
-            $join = array();
-
-            if ($i == $part_len - 1) {
-                $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
-                $lastPart = true;
-            } else {
-                $columns = array("id", "name", "url", "user_id", "ip");
-            }
-            $columns[] = "redirect_to";
-
-            $loadRenderedBody = false;
-            if (($key = array_search('body_html', $columns)) !== false) {
-                unset($columns[$key]);
-                $loadRenderedBody = true;
-                $columns[] = "body_wiki";
-            }
-
-            array_walk($columns, function(&$a) { $a = "p.".$a; });
-
-            $columns[] = "u.name AS user_name";
-
-            if (!is_null($revision) && $lastPart) {
-                // TODO: Display that we are showing old version of page.
-                // TODO: Support for current revision as parameter (permalink).
-                if (($key = array_search("p.id", $columns)) !== false) {
-                    $columns[$key] = "p.page_id AS id";
-                }
-                $table = "wiki_pages_history";
-                $where = " AND revision = ".$revision;
-                $idColumn = "p.page_id";
-            } else {
-                $table = "wiki_pages";
-                $where = "";
-                $idColumn = "p.id";
-            }
-
-            $join[] = "LEFT JOIN users u ON (p.user_id = u.id)";
-
-            if ($loadRenderedBody) {
-                $columns[] = "cache.wiki_text AS body_html";
-                $join[] = "LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('wiki-page-', p.id, '-', p.revision) AND cache.valid = 1)";
-            }
-
-            if ($followRedirect) {
-                if (is_null($parent)) {
-                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                        ".implode(" ", $join)."
-                        WHERE ".$idColumn." = GET_PAGE_ID(%s, NULL)".$where;
-                    $res = $trans->query($query, $part);
-                } else {
-                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                        ".implode(" ", $join)."
-                        WHERE ".$idColumn." = GET_PAGE_ID(%s, %s)".$where;
-                    $res = $trans->query($query, $part, $parent->id);
-                }
-            } else {
-                if (is_null($parent)) {
-                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                        ".implode(" ", $join)."
-                        WHERE p.url = %s AND p.parent_id IS NULL".$where;
-                    $res = $trans->query($query, $part);
-                } else {
-                    $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
-                        ".implode(" ", $join)."
-                        WHERE p.url = %s AND p.parent_id = %s".$where;
-                    $res = $trans->query($query, $part, $parent->id);
-                }
-            }
+            list($pgWhere, $params) = $this->constructPageWhere($parent, $part, $followRedirect, "p.id");
+            $res = $trans->query("SELECT p.id, p.name, p.url, p.user_id, p.ip, p.revision, u.name AS user_name
+                FROM wiki_pages p
+                JOIN users u ON (p.user_id = u.id)
+                WHERE ".$pgWhere, $params);
 
             try {
                 $row = $res->fetch();
 
-                $page = new \models\WikiPage;
+                $page = new \models\WikiPage();
                 $page->setParent($parent);
 
-                if (isset($row->id)) $page->id = $row->id;
-                if (isset($row->name)) $page->name = $row->name;
-                if (isset($row->url)) $page->url = $row->url;
-                if (isset($row->created)) $page->created = $row->created;
-                if (isset($row->last_modified)) $page->last_modified = $row->last_modified;
-                if (isset($row->user_id)) $page->user_id = $row->user_id;
-                if (isset($row->revision)) $page->revision = $row->revision;
-                if (isset($row->body_wiki)) $page->body_wiki = $row->body_wiki;
-                if ($loadRenderedBody) {
-                    if (is_null($row->body_html)) {
-                        $this->base->currentTransaction = $trans;
-                        $this->formatPageText($page);
-                        $this->base->currentTransaction = NULL;
-                    } else {
-                        $page->body_html = $row->body_html;
-                    }
-                }
-                if (isset($row->summary)) $page->summary = $row->summary;
-                if (isset($row->small_change)) $page->small_change = $row->small_change;
-                if (isset($row->redirect_to)) $page->redirect_to = $row->redirect_to;
+                $page->setId($row->id);
+                $page->setName($row->name);
+                $page->setUrl($row->url);
+                $page->setUserId($row->user_id);
+                $page->setRevision($row->revision);
 
-                if (strtolower($row->url) != strtolower($part)) {
-                    $this->base->currentTransaction = $trans;
-                    $page->redirected_from = $this->loadPage($path, NULL, NULL, false);
-                    $this->base->currentTransaction = NULL;
-                }
-
-                if ($page->user_id > 0) {
+                if ($row->user_id > 0) {
                     $page->User = new \models\User;
                     $page->User->id = $row->user_id;
                     $page->User->name = $row->user_name;
@@ -191,8 +132,107 @@ class Pages extends Module {
                 if ($transactionStarted) {
                     $trans->commit();
                 }
-                throw new PageNotFoundException($part, $parent, $e);
+                throw new \storage\PageNotFoundException($part, $parent, $e);
             }
+        }
+
+        // Here we have current page loaded in $parent.
+        $join = array();
+
+        $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
+        $columns[] = "redirect_to";
+
+        $loadRenderedBody = false;
+        if (($key = array_search('body_html', $columns)) !== false) {
+            unset($columns[$key]);
+            $loadRenderedBody = true;
+            $columns[] = "body_wiki";
+        }
+
+        array_walk($columns, function(&$a) { $a = "p.".$a; });
+
+        $columns[] = "u.name AS user_name";
+
+        $params = array();
+
+        // Decide whether user requested current or historical revision of pages.
+        $currentRev = true;
+        if (!is_null($revision) && $parent->getRevision() != $revision) {
+            $curretRev = false;
+            if (($key = array_search("p.id", $columns)) !== false) {
+                $columns[$key] = "p.page_id AS id";
+            }
+
+            $table = "wiki_pages_history";
+            $where = "p.page_id = %s AND revision = %s";
+            $params[] = $parent->getId();
+            $params[] = $revision;
+        } else {
+            $table = "wiki_pages";
+            $where = "p.id = %s";
+            $params[] = $parent->getId();
+        }
+
+        $join[] = "JOIN users u ON (p.user_id = u.id)";
+
+        if ($loadRenderedBody) {
+            $columns[] = "cache.wiki_text AS body_html";
+            $join[] = "LEFT JOIN wiki_text_cache cache ON (cache.key = CONCAT('wiki-page-', p.id, '-', p.revision) AND cache.valid = 1)";
+        }
+
+        $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
+            ".implode(" ", $join)." WHERE ".$where;
+
+        $res = $trans->query($query, $params);
+
+        try {
+            $row = $res->fetch();
+
+            if (isset($row->id)) $parent->id = $row->id;
+            if (isset($row->name)) $parent->name = $row->name;
+            if (isset($row->url)) $parent->url = $row->url;
+            if (isset($row->created)) $parent->created = $row->created;
+            if (isset($row->last_modified)) $parent->last_modified = $row->last_modified;
+            if (isset($row->user_id)) $parent->user_id = $row->user_id;
+            if (isset($row->revision)) $parent->revision = $row->revision;
+            if (isset($row->body_wiki)) $parent->body_wiki = $row->body_wiki;
+            if ($loadRenderedBody) {
+                if (is_null($row->body_html)) {
+                    $this->base->currentTransaction = $trans;
+                    $this->formatPageText($parent);
+                    $this->base->currentTransaction = NULL;
+                } else {
+                    $page->body_html = $row->body_html;
+                    $page->setWasCached(true);
+                }
+            }
+            if (isset($row->summary)) $parent->summary = $row->summary;
+            if (isset($row->small_change)) $parent->small_change = $row->small_change;
+            if (isset($row->redirect_to)) $parent->redirect_to = $row->redirect_to;
+            if (isset($row->locked)) $parent->locked = $row->locked;
+            if (isset($row->renderer)) $parent->renderer = $row->renderer;
+
+            if (strtolower($row->url) != strtolower($part)) {
+                $this->base->currentTransaction = $trans;
+                $parent->redirected_from = $this->loadPage($path, NULL, NULL, false);
+                $this->base->currentTransaction = NULL;
+            }
+
+            if ($row->user_id > 0) {
+                $page->User = new \models\User;
+                $page->User->id = $row->user_id;
+                $page->User->name = $row->user_name;
+            } else {
+                $page->User = new \models\FakeUser;
+                $page->User->ip = $row->ip;
+            }
+
+            $parent->setIsCurrentRevision($currentRev);
+        } catch (\drivers\EntryNotFoundException $e) {
+            if ($transactionStarted) {
+                $trans->commit();
+            }
+            throw new \storage\PageNotFoundException($part, $parent->getParent(), $e);
         }
 
         if ($transactionStarted) {
@@ -247,11 +287,11 @@ class Pages extends Module {
         $incRevision = false;
 
         foreach ($page->listChanged() as $column) {
-            if (in_array($column, array("name", "url", "body_wiki", "user_id", "small_change", "summary", "redirect_to"))) {
+            if (in_array($column, array("name", "url", "body_wiki", "user_id", "small_change", "summary", "redirect_to", "locked", "renderer", "template"))) {
                 $columns[] = $column." = %s";
                 $values[] = $page->$column;
 
-                if ($column == "body_wiki" || $column == "url" || $column == "name") {
+                if (in_array($column, array("body_wiki", "url", "name", "locked", "renderer"))) {
                     $incRevision = true;
                 }
 
@@ -261,8 +301,8 @@ class Pages extends Module {
 
         if (!empty($columns)) {
             if ($incRevision) {
-                $trans->query("INSERT INTO wiki_pages_history (page_id, name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to)
-                                SELECT                         id,      name, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to
+                $trans->query("INSERT INTO wiki_pages_history (page_id, name, parent_id, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to, locked, renderer)
+                                SELECT                         id,      name, parent_id, url, body_wiki, user_id, small_change, summary, ip, last_modified, revision, redirect_to, locked, renderer
                                 FROM wiki_pages WHERE id = %s", $page->getId());
 
                 $columns[] = "last_modified = NOW()";
@@ -282,6 +322,13 @@ class Pages extends Module {
 
             if ($incRevision) {
                 $page->setRevision($page->getRevision() + 1);
+            }
+
+            // Invalidate all referencing pages when template was changed.
+            if (substr($page->getName(), 0, strlen("template:")) == "template:") {
+                $trans->query("DELETE c FROM wiki_text_cache c
+                JOIN wiki_page_references r ON c.`key` = CONCAT('wiki-page-', r.wiki_page_id, '-', r.wiki_page_revision)
+                WHERE r.ref_page_id = %s", $page->getId());
             }
         }
 
@@ -303,12 +350,19 @@ class Pages extends Module {
 
         if ($page->getParent()) $parentId = $page->getParent()->getId();
 
-        $trans->query("INSERT INTO wiki_pages (name, parent_id, url, created, last_modified, user_id, body_wiki, small_change, summary, ip)
-                              VALUES          (%s,   %s,        %s,  NOW(),   NOW(),         %s,      %s,        %s,           %s,      %s)",
+        $trans->query("INSERT INTO wiki_pages (name, parent_id, url, created, last_modified, user_id, body_wiki, small_change, summary, ip, locked, renderer, template)
+                              VALUES          (%s,   %s,        %s,  NOW(),   NOW(),         %s,      %s,        %s,           %s,      %s, %s,     %s,       %s)",
                 $page->getName(), $parentId, $page->getUrl(), \lib\CurrentUser::ID(), $page->getBody_wiki(),
-                $page->getSmall_change(), $page->getSummary(), \lib\Session::IP());
+                $page->getSmall_change(), $page->getSummary(), \lib\Session::IP(), $page->getLocked(),
+                $page->getRenderer(), $page->getTemplate());
         $page->setId($trans->lastInsertId());
         $page->setRevision(1);
+
+        // Delete rendered text which points to this newly created page to allow changing nonexisting links
+        // to existing ones.
+        $trans->query("DELETE c FROM wiki_text_cache c
+            JOIN wiki_page_references r ON c.`key` = CONCAT('wiki-page-', r.wiki_page_id, '-', r.wiki_page_revision)
+            WHERE r.ref_page_name = %s", $page->getFullUrl());
 
         if ($transactionStarted) {
             $trans->commit();
@@ -318,7 +372,7 @@ class Pages extends Module {
     }
 
     public function storePage(\models\WikiPage $page) {
-        $diag = new Diagnostics();
+        $diag = new \storage\Diagnostics();
 
         $name = $page->getName();
         if (empty($name)) {
@@ -456,13 +510,13 @@ class Pages extends Module {
     public function loadPageAcl(\models\WikiPage $wikiPage, \models\User $user, $trans = NULL) {
         $acl = new \models\WikiAcl;
 
+        $acls = \models\WikiAcl::listAcls();
+
         // Admin has anything, do not need to bother the database.
         if ($user->hasPriv("admin_pages")) {
-            $acl->page_read = true;
-            $acl->page_write = true;
-            $acl->page_admin = true;
-            $acl->comment_read = true;
-            $acl->comment_write = true;
+            foreach ($acls as $name) {
+                $acl->$name = true;
+            }
 
             return $acl;
         }
@@ -473,57 +527,50 @@ class Pages extends Module {
             $transactionStarted = true;
         }
 
+        $query_acls_1 = array_map(function($acl) { return "acl_".$acl." AS ".$acl; }, $acls);
+        $query_acls_2 = array_map(function($acl) { return "acl.".$acl; }, $acls);
+        $query_acls_3 = array_map(function($acl) { return $acl; }, $acls);
+
         $res = $trans->query("SELECT
                 NULL AS user_id,
                 NULL AS group_id,
-                acl_page_read AS page_read,
-                acl_page_write AS page_write,
-                acl_page_admin AS page_admin,
-                acl_comment_read AS comment_read,
-                acl_comment_write AS comment_write
+                ".implode(",", $query_acls_1)."
                 FROM wiki_pages WHERE id = %s
             UNION
                 SELECT
                     NULL AS user_id,
                     acl.group_id,
-                    acl.page_read,
-                    acl.page_write,
-                    acl.page_admin,
-                    acl.comment_read,
-                    acl.comment_write
+                    ".implode(",", $query_acls_2)."
                 FROM user_group AS ug JOIN page_acl_group AS acl ON (acl.group_id = ug.group_id)
                 WHERE acl.page_id = %s AND ug.user_id = %s
             UNION
                 SELECT
                     user_id,
                     NULL AS group_id,
-                    page_read,
-                    page_write,
-                    page_admin,
-                    comment_read,
-                    comment_write
+                    ".implode(",", $query_acls_3)."
                 FROM page_acl_user
                 WHERE page_id = %s AND user_id = %s",
                 $wikiPage->getId(),
                 $wikiPage->getId(), $user->getId(),
                 $wikiPage->getId(), $user->getId());
 
+        $boolean = function($value) {
+            if (is_null($value)) {
+                return $value;
+            } else {
+                return (bool)$value;
+            }
+        };
+
         // Merge ACLs.
         foreach ($res as $row) {
-            if (!is_null($row->page_read)) $acl->page_read = $row->page_read;
-            if (!is_null($row->page_write)) $acl->page_write = $row->page_write;
-            if (!is_null($row->page_admin)) $acl->page_admin = $row->page_admin;
-            if (!is_null($row->comment_read)) $acl->comment_read = $row->comment_read;
-            if (!is_null($row->comment_write)) $acl->comment_write = $row->comment_write;
+            foreach ($acls as $name) {
+                if (!is_null($row->$name)) $acl->$name = $boolean($row->$name);
+            }
         }
 
         // If we have any uncertain privilege, ask parent.
-        if (is_null($acl->page_read)
-            || is_null($acl->page_write)
-            || is_null($acl->page_admin)
-            || is_null($acl->comment_read)
-            || is_null($acl->comment_write)) 
-        {
+        if (!empty(array_filter($acls, function($name) use (&$acl) { return is_null($acl->$name); }))) {
             if (!is_null($wikiPage->getParent())) {
                 $to_merge = $this->loadPageAcl($wikiPage->getParent(), $user, $trans);
             } else {
@@ -531,11 +578,9 @@ class Pages extends Module {
                 $to_merge = $this->loadDefaultAcl($user, $trans);
             }
 
-            if (is_null($acl->page_read)) $acl->page_read = $to_merge->page_read;
-            if (is_null($acl->page_write)) $acl->page_write = $to_merge->page_write;
-            if (is_null($acl->page_admin)) $acl->page_admin = $to_merge->page_admin;
-            if (is_null($acl->comment_read)) $acl->comment_read = $to_merge->comment_read;
-            if (is_null($acl->comment_write)) $acl->comment_write = $to_merge->comment_write;
+            foreach ($acls as $name) {
+                if (is_null($acl->$name)) $acl->$name = $boolean($to_merge->$name);
+            }
         }
 
         if ($transactionStarted) {
@@ -547,23 +592,23 @@ class Pages extends Module {
 
     public function loadDefaultAcl(\models\User $user, $trans = NULL) {
         $acl = new \models\WikiAcl;
-        $acl->page_read = $user->hasPriv("acl_page_read");
-        $acl->page_write = $user->hasPriv("acl_page_write");
-        $acl->page_admin = $user->hasPriv("acl_page_admin");
-        $acl->comment_read = $user->hasPriv("acl_comment_read");
-        $acl->comment_write = $user->hasPriv("acl_comment_write");
+
+        $acls = \models\WikiAcl::listAcls();
+        foreach ($acls as $name) {
+            $acl->$name = $user->hasPriv("acl_".$name);
+        }
+
         return $acl;
     }
 
     public function listPageAcl(\models\WikiPage $page) {
         $trans = $this->base->db->beginRO();
 
+        $acls = \models\WikiAcl::listAcls();
+
+        $query_acls = array_map(function($acl) { return "acl_".$acl." AS ".$acl; }, $acls);
         $row = $trans->query("SELECT
-            acl_page_read AS page_read,
-            acl_page_write AS page_write,
-            acl_page_admin AS page_admin,
-            acl_comment_read AS comment_read,
-            acl_comment_write AS comment_write
+            ".implode(",", $query_acls)."
             FROM wiki_pages WHERE id = %s", $page->getId())->fetch("\\models\\WikiAcl");
 
         $set = new \models\WikiAclSet();
@@ -584,9 +629,16 @@ class Pages extends Module {
             $transactionStarted = true;
         }
 
+        $acls = \models\WikiAcl::listAcls();
+
+        $query_acls = array_map(function($acl) { return "acl.".$acl; }, $acls);
         $res = $trans->query("SELECT
-            u.id, u.name, acl.page_read, acl.page_write, acl.page_admin, acl.comment_read, acl.comment_write
-            FROM page_acl_user AS acl JOIN users AS u ON (acl.user_id = u.id) WHERE page_id = %s", $page->getId());
+                u.id,
+                u.name,
+                ".implode(",", $query_acls)."
+            FROM page_acl_user AS acl
+            JOIN users AS u ON (acl.user_id = u.id)
+            WHERE page_id = %s", $page->getId());
         $res->setClassFactory("\\models\\WikiUserAcl");
 
         $out = array();
@@ -609,15 +661,20 @@ class Pages extends Module {
             $transactionStarted = true;
         }
 
+        $acls = \models\WikiAcl::listAcls();
+
+        $query_acls = array_map(function($acl) { return "acl.".$acl; }, $acls);
         $res = $trans->query("SELECT
-            g.id, g.name, acl.page_read, acl.page_write, acl.page_admin, acl.comment_read, acl.comment_write
+                g.id,
+                g.name,
+                ".implode(",", $query_acls)."
             FROM page_acl_group AS acl JOIN groups AS g ON (acl.group_id = g.id) WHERE page_id = %s", $page->getId());
         $res->setClassFactory("\\models\\WikiGroupAcl");
 
         $out = array();
 
         foreach ($res as $row) {
-            $out[] = $row;    
+            $out[] = $row;
         }
 
         if ($transactionStarted) {
@@ -630,20 +687,17 @@ class Pages extends Module {
     public function storePageAcl(\models\WikiPage $page, \models\WikiAclSet $set) {
         $trans = $this->base->db->beginRO();
 
-        $trans->query("UPDATE wiki_pages SET
-            acl_page_read = %s,
-            acl_page_write = %s,
-            acl_page_admin = %s,
-            acl_comment_read = %s,
-            acl_comment_write = %s
-            WHERE id = %s",
+        $acls = \models\WikiAcl::listAcls();
 
-            $set->default->page_read,
-            $set->default->page_write,
-            $set->default->page_admin,
-            $set->default->comment_read,
-            $set->default->comment_write,
-            $page->getId());
+        $params = array("UPDATE wiki_pages SET ".implode(",", $query_acls)." WHERE id = %s");
+        $query_acls = array_map(function($acl) use (&$params, &$set) {
+            $params[] = $set->default->$acl;
+            return "acl_".$acl." = %s";
+        }, $acls);
+
+        $params[] = $page->getId();
+
+        call_user_func_array(array($trans, "query"), $params);
 
         $users = array();
         $res = $trans->query("SELECT user_id FROM page_acl_user WHERE page_id = %s", $page->getId());
@@ -655,33 +709,29 @@ class Pages extends Module {
             $sets = array();
             $values = array();
             foreach ($set->users as $uacl) {
-                if (is_null($uacl->page_read) && is_null($uacl->page_write) && is_null($uacl->page_admin) && is_null($uacl->comment_read) && is_null($uacl->comment_write)) {
+                if (count(array_filter($acls, function($name) use (&$uacl) { return is_null($uacl->$name); })) == count($acls)) {
                     continue;
                 }
 
-                $sets[] = "(%s, %s, %s, %s, %s, %s, %s)";
-                $values += array(
-                    $page->getId(),
-                    $uacl->id,
-                    $uacl->page_read,
-                    $uacl->page_write,
-                    $uacl->page_admin,
-                    $uacl->comment_read,
-                    $uacl->comment_write
-                );
+                $sets[] = "(%s, %s".str_repeat(", %s", count($acls)).")";
+                $values[] = $page->getId();
+                $values[] = $uacl->id;
+
+                foreach ($acls as $name) {
+                    $values[] = $uacl->$name;
+                }
 
                 if (isset($users[$uacl->id])) unset($users[$uacl->id]);
             }
 
             if (!empty($sets)) {
-                $trans->query("INSERT INTO page_acl_user (page_id, user_id, page_read, page_write, page_admin, comment_read, comment_write)
+                $trans->query("INSERT INTO page_acl_user
+                    (page_id, user_id, ".implode(",", $acls).")
                     VALUES ".implode(",", $sets)."
                     ON DUPLICATE KEY UPDATE
-                        page_read = VALUES(page_read),
-                        page_write = VALUES(page_write),
-                        page_admin = VALUES(page_admin),
-                        comment_read = VALUES(comment_read),
-                        comment_write = VALUES(comment_write)", $values);
+                        ".implode(",", array_map(function($name) {
+                            return $name." = VALUES(".$name.")";
+                        }, $acls)), $values);
             }
         }
 
@@ -692,7 +742,7 @@ class Pages extends Module {
                 $values[] = $id;
                 $strings[] = "%s";
             }
-        
+
             $trans->query("DELETE FROM page_acl_user WHERE page_id = %s AND user_id IN (".implode(",", $strings).")", $values);
         }
 
@@ -706,33 +756,29 @@ class Pages extends Module {
             $sets = array();
             $values = array();
             foreach ($set->groups as $gacl) {
-                if (is_null($gacl->page_read) && is_null($gacl->page_write) && is_null($gacl->page_admin) && is_null($gacl->comment_read) && is_null($gacl->comment_write)) {
+                if (count(array_filter($acls, function($name) use (&$gacl) { return is_null($uacl->$name); })) == count($acls)) {
                     continue;
                 }
 
-                $sets[] = "(%s, %s, %s, %s, %s, %s, %s)";
-                $values += array(
-                    $page->getId(),
-                    $gacl->id,
-                    $gacl->page_read,
-                    $gacl->page_write,
-                    $gacl->page_admin,
-                    $gacl->comment_read,
-                    $gacl->comment_write
-                );
+                $sets[] = "(%s, %s".str_repeat(", %s", count($acls)).")";
+                $values[] = $page->getId();
+                $values[] = $gacl->id;
+
+                foreach ($acls as $name) {
+                    $values[] = $gacl->$name;
+                }
 
                 if (isset($groups[$gacl->id])) unset($groups[$gacl->id]);
             }
 
             if (!empty($sets)) {
-                $trans->query("INSERT INTO page_acl_group (page_id, group_id, page_read, page_write, page_admin, comment_read, comment_write)
+                $trans->query("INSERT INTO page_acl_group
+                    (page_id, group_id, ".implode(",", $acls).")
                     VALUES ".implode(",", $sets)."
                     ON DUPLICATE KEY UPDATE
-                        page_read = VALUES(page_read),
-                        page_write = VALUES(page_write),
-                        page_admin = VALUES(page_admin),
-                        comment_read = VALUES(comment_read),
-                        comment_write = VALUES(comment_write)", $values);
+                        ".implode(",", array_map(function($name) {
+                            return $name." = VALUES(".$name.")";
+                        }, $acls)), $values);
             }
         }
 
@@ -747,5 +793,210 @@ class Pages extends Module {
         }
 
         $trans->commit();
+    }
+
+    /**
+     * List begining letters of pages with number of pages belonging to given letter.
+     * @return array $struct
+     *     - string $letter Begining letter of page name.
+     *     - int $numOfPages Number of pages belonging to given letter.
+     */
+    function listPagesLetters() {
+        $trans = $this->base->db->beginRO();
+
+        $res = $trans->query("SELECT
+                IF(UPPER(LEFT(`name`, 1)) BETWEEN 'A' AND 'Z', UPPER(LEFT(`name`, 1)), '#') AS `letter`,
+                COUNT(id) AS `numOfPages`
+            FROM `wiki_pages`
+            GROUP BY `letter`
+            ORDER BY `letter` ASC");
+
+        $out = array();
+        foreach ($res as $row) {
+            $out[] = $row;
+        }
+
+        $trans->commit();
+
+        return $out;
+    }
+
+    /**
+     * Helper method to load all parents of pages, effective way.
+     */
+    protected function loadAllParents($trans, $parent_ids) {
+        $out = array();
+        $new_parents = array();
+
+        if (count($parent_ids) > 0) {
+            $res = $trans->query("SELECT `id`, `name`, `url`, `parent_id` FROM `wiki_pages` WHERE `id` IN (".implode(",", array_fill(0, count($parent_ids), "%s")).")", array_keys($parent_ids));
+            $res->setClassFactory("\\models\\WikiPage");
+
+            foreach ($res as $row) {
+                $out[$row->getId()] = $row;
+
+                if (!is_null($row->getParentId())) {
+                    $new_parents[$row->getParentId()] = true;
+                }
+            }
+
+            if (!empty($new_parents)) {
+                $new_parents = $this->loadAllParents($new_parents);
+                foreach ($out as $page) {
+                    if (!is_null($page->getParentId())) {
+                        $page->setParent($new_parents[$page->getParentId()]);
+                    }
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * List pages with given filter conditions.
+     * @param $filter Filter.
+     *     - array $columns List of columns to load.
+     *         id, name, url, created, last_modified, revision, parent_id, links, references
+     *
+     *     - string $letter First letter (A-Z or # for anything that is not A-Z).
+     *     - int $linksTo Load pages that links to specified page ID.
+     *
+     *     - int $limit Number of pages.
+     *     - int $offset Offset of paging.
+     *
+     *     - array $sort List of columns to use for sorting. Number of items in sort and direction must be equal.
+     *     - array $direction Direction of sorting (ASC/DESC). Number of items in sort and direction must be equal.
+     * @return struct $response
+     *     - int $totalCount Total number of pages not affecting the limit and offset.
+     *     - array $pages WikiPages matching current filter criteria.
+     */
+    function listPages(\lib\Object $filter) {
+        $columns = array();
+        $values = array();
+        $joins = array();
+        $where = array();
+        $group = array();
+
+        foreach ($filter->getOrDefault("columns", array("id", "name", "url", "created", "last_modified", "revision", "parent_id")) as $column) {
+            switch ($column) {
+                case "id":
+                case "name":
+                case "url":
+                case "created":
+                case "last_modified":
+                case "revision":
+                case "parent_id":
+                    $columns[] = "`p`.`".$column."`";
+                    break;
+
+                case "links":
+                    $columns[] = "COUNT(`rl`.`id`) AS `links`";
+                    $joins[] = "LEFT JOIN `wiki_page_references` `rl` ON (`rl`.`wiki_page_id` = `p`.`id` AND `rl`.`wiki_page_revision` = `p`.`revision`)";
+                    break;
+
+                case "references":
+                    $columns[] = "COUNT(DISTINCT `rr`.`wiki_page_id`) AS `references`";
+                    $joins[] = "LEFT JOIN `wiki_page_references` `rr` ON (`rr`.`ref_page_id` = `p`.`id`)";
+                    break;
+            }
+        }
+
+        if (!is_null($letter = $filter->getOrDefault("letter", NULL))) {
+            if ($letter == "#") {
+                $where[] = "UPPER(LEFT(`name`, 1)) NOT BETWEEN 'A' AND 'Z'";
+            } else {
+                $where[] = "UPPER(LEFT(`name`, 1)) = %s";
+                $values[] = $letter;
+            }
+        }
+
+        if (!is_null($linksTo = $filter->getOrDefault("linksTo", NULL))) {
+            $joins[] = "JOIN `wiki_page_references` `rl_w` ON (`rl_w`.`wiki_page_id` = `p`.`id` AND `rl_w`.`wiki_page_revision` = `p`.`revision`)";
+            $where[] = "`rl_w`.`ref_page_id` = %s";
+            $values[] = $linksTo;
+        }
+
+        $query = "SELECT SQL_CALC_FOUND_ROWS ".implode(",", array_unique($columns))." FROM `wiki_pages` `p` ".implode(" ", array_unique($joins));
+
+        if (!empty($where)) {
+            $query .= " WHERE ".implode(" AND ", $where);
+        }
+
+        $query .= " GROUP BY `p`.`id`";
+
+        $sort = $filter->getOrDefault("sort", array());
+        $direction = $filter->getOrDefault("direction", array());
+
+        $map = function($column) {
+            switch($column) {
+                case "id":
+                case "name":
+                case "url":
+                case "created":
+                case "last_modified":
+                case "revision":
+                case "parent_id":
+                    return "`p`.`".$column."`";
+
+                case "links":
+                case "references":
+                    return "`".$column."`";
+
+                default:
+                    return $column;
+            }
+        };
+
+        for ($i = 0; $i < min(count($sort), count($direction)); ++$i) {
+            if ($i == 0) {
+                $query .= " ORDER BY ";
+            }
+
+            $query .= $map($sort[$i])." ".$direction[$i];
+        }
+
+        if (!is_null($limit = $filter->getOrDefault("limit", NULL))) {
+            $offset = $filter->getOrDefault("offset", "0");
+            $query .= " LIMIT %s, %s";
+
+            $values[] = $offset;
+            $values[] = $limit;
+        }
+
+        $trans = $this->base->db->beginRO();
+
+        $res = $trans->query($query, $values);
+        $res->setClassFactory("\\models\\WikiPage");
+
+        $parents = array();
+
+        $out = array();
+        foreach ($res as $row) {
+            $out[] = $row;
+
+            if (!is_null($row->parent_id)) {
+                $parents[$row->parent_id] = true;
+            }
+        }
+
+        $totalCount = $trans->query("SELECT FOUND_ROWS() AS `totalCount`")->fetch()->totalCount;
+
+        // Load all parent pages for current result set.
+        $parents = $this->loadAllParents($trans, $parents);
+        foreach ($out as $page) {
+            if (!is_null($page->getParentId())) {
+                $page->setParent($parents[$page->getParentId()]);
+            }
+        }
+
+        $trans->commit();
+
+        $ret = new \stdClass;
+
+        $ret->totalCount = $totalCount;
+        $ret->pages = $out;
+
+        return $ret;
     }
 }

@@ -49,8 +49,8 @@ class Diff {
 		$commonPrefix = $this->commonPrefix($split1, $split2);
 		$commonSuffix = $this->commonSuffix($split1, $split2);
 
-		$split1 = array_slice($split1, count($commonPrefix), -count($commonSuffix));
-		$split2 = array_slice($split2, count($commonPrefix), -count($commonSuffix));
+		$split1 = array_slice(array_slice($split1, count($commonPrefix)), -count($commonSuffix));
+		$split2 = array_slice(array_slice($split2, count($commonPrefix)), -count($commonSuffix));
 
 		$diff = $this->computeDiff($split1, 0, count($split1), $split2, 0, count($split2));
 		$diff[] = array(count($split1), count($split2), 0);

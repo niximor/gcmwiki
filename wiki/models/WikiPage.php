@@ -17,14 +17,24 @@ class WikiPage extends Model implements \lib\Observable {
 	protected $body_wiki;
 	protected $body_html;
 	protected $redirect_to;
+	protected $locked;
+	protected $renderer;
 
 	protected $summary;
 	protected $small_change;
 
+	protected $parent_id;
 	protected $parent;
 	protected $redirected_from = NULL;
 
+	protected $links;
+	protected $references;
+
 	protected $wiki_page_links = array();
+
+	protected $is_current_revision = NULL;
+
+	protected $was_cached = false;
 
 	public $User;
 
@@ -63,17 +73,5 @@ class WikiPage extends Model implements \lib\Observable {
 
 WikiPage::init_static();
 
-class WikiPageObserver implements \lib\Observer {
-	public function notify(\lib\Observable $object) {
-		$be = \Config::Get("__Backend");
-		foreach ($be->getReferencedPages($object) as $page) {
-			$be->invalidateWikiCache("wiki-page-".$page->wiki_page_id);
-		}
-	}
-}
-
-WikiPage::$nameChangeObserver->registerObserver(new WikiPageObserver());
-
 // FIXME: This is ugly hack to allow registering pageChangeObserver.
 require_once "lib/format/Category.php";
-

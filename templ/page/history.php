@@ -1,4 +1,18 @@
-<h1>History of page <?php echo htmlspecialchars($Page->getName()); ?></h1>
+<?php
+
+$pp = function($page) use (&$pp) {
+    if (is_null($page)) return;
+
+    $parent = $pp($page->getParent());
+    if (!empty($parent)) {
+        return $parent." / ".htmlspecialchars($page->getName());
+    } else {
+        return htmlspecialchars($page->getName());
+    }
+};
+
+?>
+<h1>History of page <?php echo $pp($Page); ?></h1>
 <form action="<?php echo $this->url($this->getSelf()); ?>" method="get">
 
 <div>

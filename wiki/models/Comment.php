@@ -4,6 +4,7 @@ namespace models;
 
 require_once "models/Model.php";
 require_once "models/WikiPage.php";
+require_once "models/User.php";
 require_once "lib/Observer.php";
 
 class Comment extends Model {
@@ -18,6 +19,7 @@ class Comment extends Model {
 	protected $owner_user_id;
 	protected $edit_user_id;
 	protected $anonymous_name;
+	protected $hidden;
 	protected $wiki_page_links = array();
 
 	protected $page;
@@ -25,6 +27,8 @@ class Comment extends Model {
 	public $OwnerUser;
 	public $EditUser;
 	public $childs; // child comments
+
+	public $History; // Comment revision history.
 
 	public function updateText($text) {
 		$this->setText_wiki($text);

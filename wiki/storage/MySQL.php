@@ -77,6 +77,28 @@ class MySQL implements Storage {
         return $this->base->pages->listPageGroupsAcl($page);
     }
 
+    /**
+     * List begining letters of pages with number of pages belonging to given letter.
+     * @return array $struct
+     *     - string $letter Begining letter of page name.
+     *     - int $numOfPages Number of pages belonging to given letter.
+     */
+    public function listPagesLetters() {
+        return $this->base->pages->listPagesLetters();
+    }
+
+    /**
+     * List pages with given filter conditions.
+     * @param $filter Filter.
+     *     - string $letter First letter (A-Z or # for anything that is not A-Z).
+     *     - int $limit Number of pages.
+     *     - int $offset Offset of paging.
+     */
+    public function listPages(\lib\Object $filter) {
+        return $this->base->pages->listPages($filter);
+    }
+
+
     public function storePageAcl(\models\WikiPage $page, \models\WikiAclSet $set) {
         return $this->base->pages->storePageAcl($page, $set);
     }
@@ -169,8 +191,8 @@ class MySQL implements Storage {
         return $this->base->comments->loadComments($page);
     }
 
-    public function loadComment($commentId) {
-        return $this->base->comments->loadComment($commentId);
+    public function loadComment($commentId, $withHistory = false) {
+        return $this->base->comments->loadComment($commentId, $withHistory);
     }
 
     public function getReferencedComments(\models\WikiPage $page) {
