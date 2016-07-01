@@ -14,6 +14,7 @@ class Variables {
         $format->registerBlockFormatter("foreach", array($this, "foreachCall"));
         $format->registerBlockFormatter("define", array($this, "defineCall"));
         $format->registerBlockFormatter("multidef", array($this, "multiDefCall"));
+        $format->registerBlockFormatter("json", array($this, "jsonCall"));
     }
 
     public function set($name, $value) {
@@ -21,15 +22,44 @@ class Variables {
     }
 
     protected function varExists($name) {
-        return isset($this->variables[$name]);
+        return !is_null($this->getVar($name, NULL));
     }
 
-    protected function getVar($name) {
-        if ($this->varExists($name)) {
-            return $this->variables[$name];
-        } else {
-            return NULL;
+    protected function getVar($name, $default = "") {
+        $parts = preg_split("/(\.+)/", $name);
+        $found = true;
+
+        $parts2 = array();
+        foreach ($parts as $part) {
+            $match = false;
+            while (preg_match('/(.*?)\[([0-9]+)\]/', $part, $matches)) {
+                $match = true;
+                if (!empty($matches[1])) {
+                    $parts2[] = $matches[1];
+                }
+                $parts2[] = $matches[2];
+                $part = substr($part, strlen($matches[0]));
+            }
+
+            if (!$match) {
+                $parts2[] = $part;
+            }
         }
+
+        $struct = $this->variables;
+        foreach ($parts2 as $part) {
+            if (is_array($struct) && array_key_exists($part, $struct)) {
+                $struct = $struct[$part];
+            } elseif (is_object($struct) && property_exists($struct, $part)) {
+                $struct = $struct->$part;
+            } elseif (isset($default)) {
+                return $default;
+            } else {
+                return "";
+            }
+        }
+
+        return $struct;
     }
 
     public function ifCall(Context $ctx, $params) {
@@ -48,16 +78,27 @@ class Variables {
 
     public function echoCall(Context $ctx, $params) {
         if (isset($params[1])) {
-            $parent = $ctx->getParent();
-            if ($this->varExists($params[1])) {
-                $lines = $this->getVar($params[1]);
-                if (!is_array($lines)) {
-                    $lines = preg_split('/\n/', $lines);
-                }
-                $parent->formatLines($parent, $lines);
-            } elseif (isset($params[2])) {
-                $parent->formatLine($parent, $params[2]);
+            $val = $this->getVar($params[1], ((isset($params[2]))?$params[2]:""));
+
+            if (!is_array($val)) {
+                $val = preg_split("/\n/", $val);
             }
+
+            $out = array();
+
+            // Flattern the array to provide only linear list of lines to write.
+            $map = function(&$item) use (&$map, $ctx, &$out) {
+                if (is_array($item)) {
+                    array_map($map, $item);
+                    return NULL; 
+                } else {
+                    $out[] = $item;
+                }
+            };
+
+            array_map($map, $val);
+
+            $ctx->formatLines($ctx->getParent()->getParent(), $out);
         }
     }
 
@@ -69,9 +110,14 @@ class Variables {
 
         if (isset($params[1])) {
             $parent = $ctx->getParent();
-            if (is_array($this->getVar($params[1]))) {
-                foreach ($this->getVar($params[1]) as $row) {
-                    $this->set($itemname, $row);
+            $var = $this->getVar($params[1]);
+            if (is_array($var) || is_object($var)) {
+                foreach ($var as $key=>$row) {
+                    if (is_int($key)) {
+                        $this->set($itemname, $row);
+                    } else {
+                        $this->set($itemname, array("key" => $key, "value" => $row));
+                    }
                     $parent->formatLines($parent, $ctx->lines);
                 }
             } else {
@@ -123,6 +169,14 @@ class Variables {
             } else {
                 $this->set($currentVarName, implode("\n", $currentVarValue));
             }
+        }
+    }
+
+    public function jsonCall(Context $ctx, $params) {
+        if (isset($params[1])) {
+            $value = implode("\n", $ctx->lines);
+            $value = json_decode($value);
+            $this->set($params[1], $value);
         }
     }
 }
