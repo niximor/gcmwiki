@@ -222,3 +222,8 @@ input[name=special].down+ul { visibility: visible; opacity: 1; }
 
 .wiki:after { display: block; content: " "; clear: both; font-size: 0; }
 .wiki table p { margin: 0; }
+.wiki .box { border: solid 1px #D5E5F0; background-color: #fafafa; padding: 0.5em; max-width: 100%; }
+.wiki .box.right { float: right; margin-left: 1em; }
+#main .wiki .box h2, .wiki .box h3, .wiki .box h4, .wiki .box h5, .wiki .box h6 { margin: 0; margin-top: 0.5em; }
+#main .wiki .box h2 { margin: -0.2em -0.4em; padding: 0 0.4em; }
+
