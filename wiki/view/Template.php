@@ -175,7 +175,13 @@ class Template implements \lib\Observable {
 			$parts = explode("/", $path);
 			$parts = array_splice($parts, 0, $cut);
 			$path = implode("/", $parts);
-		}
+        }
+
+        // Strip trailing slash from root URL, because it is added later on
+        // when the path is constructed.
+        if (!empty($root) && $root[strlen($root) - 1] == "/") {
+            $root = substr($root, 0, -1);
+        }
 
 		if (!empty($path) && $path[0] == '/') {
 			return $root.$path;
