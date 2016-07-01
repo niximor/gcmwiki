@@ -17,8 +17,9 @@ class WikiPage extends Model implements \lib\Observable {
 	protected $body_wiki;
 	protected $body_html;
 	protected $redirect_to;
-	protected $locked;
-	protected $renderer;
+	protected $locked = false;
+    protected $renderer;
+    protected $template;
 
 	protected $summary;
 	protected $small_change;
