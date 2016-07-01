@@ -21,6 +21,12 @@ class Variables {
         $this->variables[$name] = $value;
     }
 
+    public function loadFrom(Variables $other) {
+        foreach ($other->variables as $name=>$val) {
+            $this->set($name, $val);
+        }
+    }
+
     protected function varExists($name) {
         return !is_null($this->getVar($name, NULL));
     }
@@ -110,7 +116,7 @@ class Variables {
 
         if (isset($params[1])) {
             $parent = $ctx->getParent();
-            $var = $this->getVar($params[1]);
+            $var = $this->getVar($params[1], NULL);
             if (is_array($var) || is_object($var)) {
                 foreach ($var as $key=>$row) {
                     if (is_int($key)) {
@@ -120,7 +126,7 @@ class Variables {
                     }
                     $parent->formatLines($parent, $ctx->lines);
                 }
-            } else {
+            } elseif (!empty($var)) {
                 $this->set($itemname, $this->getVar($name));
                 $parent->formatLines($parent->getParent(), $ctx->lines);
             }

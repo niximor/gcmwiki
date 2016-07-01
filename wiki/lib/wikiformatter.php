@@ -233,6 +233,10 @@ class WikiFormatterFull extends WikiFormatterSimple {
         return $this->variables;
     }
 
+    function setVariables(format\Variables $variables) {
+        $this->variables->loadFrom($variables);
+    }
+
     function __construct() {
         parent::__construct();
 

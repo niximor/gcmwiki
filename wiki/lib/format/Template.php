@@ -14,7 +14,7 @@ class Template {
         $cls = get_class($ctx->getFormatter());
         // Format using same formatter as was used to render the page.
         $f = new $cls();
-        $f->getVariables()->multiDefCall($ctx, array());
+        $f->setVariables($ctx->getFormatter()->getVariables());
 
         if (!isset($params[1])) return;
         $templateName = $params[1];
