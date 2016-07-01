@@ -219,3 +219,6 @@ input[name=special].down+ul { visibility: visible; opacity: 1; }
 #modalCover .window>div>.content { overflow: auto; }
 #modalCover form { margin: 0; padding: 0.2em; }
 #modalCover form>div { margin: 0; background: none; border: none; }
+
+.wiki:after { display: block; content: " "; clear: both; font-size: 0; }
+.wiki table p { margin: 0; }
