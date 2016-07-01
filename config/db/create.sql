@@ -250,7 +250,8 @@ INSERT INTO `system_config` (`id`, `name`, `value`) VALUES
   (10, 'Title', 'GCM::Wiki'),
   (11, 'Attachments.FileMode', '0664'),
   (12, 'Attachments.DirectoryMode', '0775'),
-  (13, 'Attachments.Previews.image', 'contain64x64,contain120x120,contain240x240,contain640x480,contain800x600,contain1024x768,contain1280x720,contain1920x1080');
+  (13, 'Attachments.Previews.image', 'contain64x64,contain120x120,contain240x240,contain640x480,contain800x600,contain1024x768,contain1280x720,contain1920x1080')
+  (14, 'DisablePageCache', '0');
 
 DROP TABLE IF EXISTS `system_privileges`;
 CREATE TABLE `system_privileges` (
