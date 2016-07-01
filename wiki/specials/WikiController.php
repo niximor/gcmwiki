@@ -233,7 +233,7 @@ class WikiController extends SpecialController {
 		$be = $this->getBackend();
 
 		try {
-			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
+			$this->relatedPage = $be->loadPage($path, array("summary", "small_change"), NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
 			if ($this->Acl->page_read) {
