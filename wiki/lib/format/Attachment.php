@@ -3,6 +3,7 @@
 namespace lib\formatter\format;
 
 require_once "lib/format/Block.php";
+require_once "lib/path.php";
 
 class Attachment {
     public function register(Block $format) {
@@ -29,7 +30,7 @@ class Attachment {
         if (count($attachment) > 0) {
             $attachment = $attachment[0];
 
-            $root = dirname($_SERVER["SCRIPT_NAME"]);
+            $root = \lib\path::getRoot();
 
             $ctx->generateHTML("<a href=\"".$root."/".$page->getFullUrl()."/attachments:index/".htmlspecialchars($attachment->getName())."\">");
 

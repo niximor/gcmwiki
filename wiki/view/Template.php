@@ -3,6 +3,7 @@
 namespace view;
 
 require_once "lib/Observer.php";
+require_once "lib/path.php";
 
 class PageAction {
 	public $url;
@@ -169,23 +170,17 @@ class Template implements \lib\Observable {
 	function url($path, $cut = 0) {
 		if (is_null($path)) return NULL;
 
-		$root = dirname($_SERVER["SCRIPT_NAME"]);
-
 		if ($cut < 0) {
 			$parts = explode("/", $path);
 			$parts = array_splice($parts, 0, $cut);
 			$path = implode("/", $parts);
         }
 
-        // Strip trailing slash from root URL, because it is added later on
-        // when the path is constructed.
-        if (!empty($root) && $root[strlen($root) - 1] == "/") {
-            $root = substr($root, 0, -1);
-        }
+        $root = \lib\path::getRoot();
 
-		if (!empty($path) && $path[0] == '/') {
+        if (!empty($path) && $path[0] == '/') {
 			return $root.$path;
-		} else {
+        } else {
 			return $root."/".$path;
 		}
 	}

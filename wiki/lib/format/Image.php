@@ -2,6 +2,8 @@
 
 namespace lib\formatter\format;
 
+require_once "lib/path.php";
+
 class Image extends InlineTrigger {
     function getRegExp(Context $ctx) {
         return '/\(\((.*?)\)\)/';
@@ -18,7 +20,7 @@ class Image extends InlineTrigger {
             $ctx->log("Get image size for ".$url);
             $size = getimagesize($url);
         } elseif (preg_match('|^/|', $url)) {
-            $root = dirname($_SERVER["SCRIPT_NAME"]);
+            $root = \lib\path::getRoot();
             $oldurl = $url;
             $url = $root.$url;
 
@@ -122,7 +124,7 @@ class Image extends InlineTrigger {
     }
 
     static function testSuite(\lib\formatter\WikiFormatter $f) {
-        $url = dirname($_SERVER["SCRIPT_NAME"]);
+        $url = \lib\path::getRoot();
         self::testFormat($f, "((/static/logo.png))
 ((/static/logo.png|50%|))
 ((/static/logo.png|right,50%|Image with caption))

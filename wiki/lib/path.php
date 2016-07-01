@@ -36,4 +36,16 @@ class path {
 
         return rtrim($joined, "/");
     }
+
+    public static function getRoot() {
+        $root = dirname($_SERVER["SCRIPT_NAME"]);
+
+        // Strip trailing slash if present. This is needed because all methods that use the root assumes there
+        // is no trailing slash.
+        if (!empty($root) && $root[strlen($root) - 1] == "/") {
+            return substr($root, 0, -1);
+        } else {
+            return $root;
+        }
+    }
 }

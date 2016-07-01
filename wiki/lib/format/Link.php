@@ -2,6 +2,8 @@
 
 namespace lib\formatter\format;
 
+require_once "lib/path.php";
+
 class LinkInText extends InlineTrigger {
     function getRegExp(Context $ctx) {
         if (!($ctx instanceof LinkContext)) {
@@ -88,7 +90,8 @@ class Link extends InlineTrigger {
 
                 $url = implode("/", $fullPageUrl);
 
-                $root = dirname($_SERVER["SCRIPT_NAME"]);
+                $root = \lib\path::getRoot();
+
                 if ($url[0] == "/") {
                     $url = $root.$url;
                 } else {
@@ -114,7 +117,7 @@ class Link extends InlineTrigger {
                 if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/', $url)) {
                     $url = "http://".$url;
                 } else {
-                    $root = dirname($_SERVER["SCRIPT_NAME"]);
+                    $root = \lib\path::getRoot();
 
                     if ($text == $url) {
                         $text = $pathParts[count($pathParts) - 1];

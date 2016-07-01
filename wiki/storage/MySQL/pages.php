@@ -197,7 +197,7 @@ class Pages extends Module {
             if (isset($row->revision)) $parent->revision = $row->revision;
             if (isset($row->body_wiki)) $parent->body_wiki = $row->body_wiki;
             if ($loadRenderedBody) {
-                if (is_null($row->body_html)) {
+                if (is_null($row->body_html) || \Config::Get("DisablePageCache", false)) {
                     $this->base->currentTransaction = $trans;
                     $this->formatPageText($parent);
                     $this->base->currentTransaction = NULL;
