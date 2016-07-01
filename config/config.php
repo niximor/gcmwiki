@@ -1,7 +1,10 @@
 <?php
 
 // Database backend to use
-Config::Set("Backend", "MySQL");
+Config::Set("Backend", "\\storage\\MySQL");
+
+// Backend to use for storing attachments
+Config::Set("StorageBackend", "\\storage\\FileSystem\\DataStore");
 
 // Connection to MySQL database.
 Config::Set("MySQLMaster", array(
@@ -11,5 +14,6 @@ Config::Set("MySQLMaster", array(
 	"database" => "" // Database name
 ));
 
+// Set debug to false in production environment!
 Config::Set("debug", true);
 
