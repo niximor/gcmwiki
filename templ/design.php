@@ -9,7 +9,8 @@
 				echo Config::Get("Title", "GCM::Wiki");
 			}
 		?></title>
-		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="stylesheet" type="text/css" href="<?php echo $this->url("/static/style.css"); ?>" />
 		<script type="text/javascript" src="<?php echo $this->url("/static/wiki.js"); ?>"></script>
 	</head>
