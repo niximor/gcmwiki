@@ -393,11 +393,11 @@ class WikiController extends SpecialController {
 			if ($this->Acl->page_admin) {
 				$set = new \models\WikiAclSet();
 
-				$toVal = function($val) {
+				$toVal = function($field, $val) {
 					if ($val == "1") return true;
 					elseif ($val == "0") return false;
 					elseif ($val == "-1") return NULL;
-					else throw Exception("Invalid field value.");
+					else throw new \Exception("Invalid value of field '".$field."': '".$val."'");
 				};
 
 				$set->default = new \models\WikiAcl();
@@ -405,16 +405,16 @@ class WikiController extends SpecialController {
 				$acls = \models\WikiAcl::listAcls();
 
 				foreach ($acls as $name) {
-					$set->default->$name = $toVal($_POST["default"][$name]);
+					$set->default->$name = $toVal("default.".$name, $_POST["default"][$name]);
 				}
 
 				if (isset($_POST["user"]) && is_array($_POST["user"])) {
-					foreach ($_POST["user"] as $user => $acls) {
+					foreach ($_POST["user"] as $user => $uacls) {
 						$ua = new \models\WikiUserAcl();
 						$ua->id = (int)$user;
 
 						foreach ($acls as $name) {
-							$ua->$name = $toVal($acls[$name]);
+							$ua->$name = $toVal("user[".$user."].".$name, $uacls[$name]);
 						}
 
 						$set->users[] = $ua;
@@ -422,12 +422,12 @@ class WikiController extends SpecialController {
 				}
 
 				if (isset($_POST["group"]) && is_array($_POST["group"])) {
-					foreach ($_POST["group"] as $group=>$acls) {
+                    foreach ($_POST["group"] as $group=>$gacls) {
 						$ga = new \models\WikiGroupAcl();
 						$ga->id = (int)$group;
 
 						foreach ($acls as $name) {
-							$ga->$name = $toVal($acls[$name]);
+							$ga->$name = $toVal("group[".$group."].".$name, $gacls[$name]);
 						}
 
 						$set->groups[] = $ga;

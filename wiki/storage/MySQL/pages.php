@@ -689,15 +689,15 @@ class Pages extends Module {
 
         $acls = \models\WikiAcl::listAcls();
 
-        $params = array("UPDATE wiki_pages SET ".implode(",", $query_acls)." WHERE id = %s");
         $query_acls = array_map(function($acl) use (&$params, &$set) {
             $params[] = $set->default->$acl;
             return "acl_".$acl." = %s";
         }, $acls);
+        $query = "UPDATE wiki_pages SET ".implode(",", $query_acls)." WHERE id = %s";
 
         $params[] = $page->getId();
 
-        call_user_func_array(array($trans, "query"), $params);
+        $trans->query($query, $params);
 
         $users = array();
         $res = $trans->query("SELECT user_id FROM page_acl_user WHERE page_id = %s", $page->getId());
@@ -705,7 +705,7 @@ class Pages extends Module {
             $users[$u->user_id] = true;
         }
 
-        if (count($set->users) > 0) {
+        if (!empty($set->users)) {
             $sets = array();
             $values = array();
             foreach ($set->users as $uacl) {
@@ -752,11 +752,11 @@ class Pages extends Module {
             $groups[$g->group_id] = true;
         }
 
-        if (count($set->groups) > 0) {
+        if (!empty($set->groups)) {
             $sets = array();
             $values = array();
             foreach ($set->groups as $gacl) {
-                if (count(array_filter($acls, function($name) use (&$gacl) { return is_null($uacl->$name); })) == count($acls)) {
+                if (count(array_filter($acls, function($name) use (&$gacl) { return is_null($gacl->$name); })) == count($acls)) {
                     continue;
                 }
 
