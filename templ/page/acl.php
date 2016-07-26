@@ -198,19 +198,13 @@ function addRow(parent, name, label) {
 }
 
 btnUser.onclick = function() {
-	option = this.form.userId.selectedOptions;
-
-	if (option.length > 0) {
-		addRow(document.getElementById("users"), "user[" + option[0].value.toString() + "]", option[0].text);
-	}
+    option = this.form.userId.options[this.form.userId.selectedIndex];
+	addRow(document.getElementById("users"), "user[" + option.value.toString() + "]", option.text);
 }
 
 btnGroup.onclick = function() {
-	option = this.form.groupId.selectedOptions;
-
-	if (option.length > 0) {
-		addRow(document.getElementById("groups"), "group[" + option[0].value.toString() + "]", option[0].text);
-	}
+    option = this.form.groupId.options[this.form.groupId.selectedIndex];
+	addRow(document.getElementById("groups"), "group[" + option.value.toString() + "]", option.text);
 }
 
 </script>
