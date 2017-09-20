@@ -92,7 +92,7 @@ class Template implements \lib\Observable {
 		if (!is_null($this->parent)) {
 			return $this->parent->getTitle();
 		} else {
-			return $this->variables["Title"];
+			return $this->variables["Title"] ?? NULL;
 		}
 	}
 

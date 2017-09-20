@@ -6,6 +6,7 @@ require_once "mail/MailMessage.php";
 require_once "specials/SpecialController.php";
 require_once "view/AdminModule.php";
 require_once "lib/Observer.php";
+require_once "view/Template.php";
 
 class WikiToolkit extends SpecialController {
 	public function login() {

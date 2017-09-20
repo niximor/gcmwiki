@@ -109,7 +109,7 @@ class Link extends InlineTrigger {
                     $ctx->generate(htmlspecialchars($page->getName()));
                 }
 
-                $ctx->generateHTML('</a>');
+                $ctx->generateHTMLInline('</a>');
                 $generated = true;
 
                 $this->addLink($ctx, (int)$page->getId());

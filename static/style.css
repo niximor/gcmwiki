@@ -226,4 +226,5 @@ input[name=special].down+ul { visibility: visible; opacity: 1; }
 .wiki .box.right { float: right; margin-left: 1em; }
 #main .wiki .box h2, .wiki .box h3, .wiki .box h4, .wiki .box h5, .wiki .box h6 { margin: 0; margin-top: 0.5em; }
 #main .wiki .box h2 { margin: -0.2em -0.4em; padding: 0 0.4em; }
-
+.wiki code { color: #c7254e; background-color: #f9f2f4; padding: 0.2em 0.4em; display: inline-block; }
+.wiki pre { padding: 1em 0.5em; border: solid 0.05em rgba(0,0,0,0.15); }

@@ -841,7 +841,7 @@ class Pages extends Module {
             }
 
             if (!empty($new_parents)) {
-                $new_parents = $this->loadAllParents($new_parents);
+                $new_parents = $this->loadAllParents($trans, $new_parents);
                 foreach ($out as $page) {
                     if (!is_null($page->getParentId())) {
                         $page->setParent($new_parents[$page->getParentId()]);
