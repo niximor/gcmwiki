@@ -166,7 +166,7 @@ class WikiController extends SpecialController {
 			$this->template->redirect($this->template->getSelf()."?edit");
 			return;
 		}
-
+		
 		$urlChanged = false;
 		if (isset($_POST["body"]) && isset($_POST["name"])) {
 			if (!$this->relatedPage->locked || $this->Acl->page_admin) {

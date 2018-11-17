@@ -3,8 +3,9 @@
 namespace lib\formatter;
 
 require_once "lib/format/Context.php";
+require_once "lib/formatter.php";
 
-class WikiFormatter {
+class WikiFormatter implements \lib\Formatter {
     const LINE_BREAK_POINT = 80; // Number of characters on line.
 
     protected $output = array();

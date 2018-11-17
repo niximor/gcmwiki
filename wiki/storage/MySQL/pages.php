@@ -4,10 +4,20 @@ namespace storage\MySQL;
 
 require_once "storage/MySQL/base.php";
 require_once "lib/wikiformatter.php";
+require_once "lib/markdownformatter.php";
 
 class Pages extends Module {
     protected function formatPageText(\models\WikiPage $page) {
-        $f = new \lib\formatter\WikiFormatterFull();
+        switch ($page->getRenderer()) {
+            case "markdown":
+                $f = new \lib\MarkdownFormatter();
+                break;
+
+            case "wiki":
+            default:
+                $f = new \lib\formatter\WikiFormatterFull();
+                break;
+        }        
 
         $page->body_html = $f->format($page->body_wiki, $page);
         $this->base->cache->storeWikiCache("wiki-page-".$page->getId()."-".$page->getRevision(), $page->body_html);
@@ -139,7 +149,7 @@ class Pages extends Module {
         // Here we have current page loaded in $parent.
         $join = array();
 
-        $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip"), $requiredColumns);
+        $columns = array_merge(array("id", "url", "name", "revision", "last_modified", "user_id", "ip", "renderer"), $requiredColumns);
         $columns[] = "redirect_to";
 
         $loadRenderedBody = false;
@@ -182,7 +192,6 @@ class Pages extends Module {
 
         $query = "SELECT ".implode(",", $columns)." FROM ".$table." p
             ".implode(" ", $join)." WHERE ".$where;
-
         $res = $trans->query($query, $params);
 
         try {
@@ -196,6 +205,12 @@ class Pages extends Module {
             if (isset($row->user_id)) $parent->user_id = $row->user_id;
             if (isset($row->revision)) $parent->revision = $row->revision;
             if (isset($row->body_wiki)) $parent->body_wiki = $row->body_wiki;
+            if (isset($row->summary)) $parent->summary = $row->summary;
+            if (isset($row->small_change)) $parent->small_change = $row->small_change;
+            if (isset($row->redirect_to)) $parent->redirect_to = $row->redirect_to;
+            if (isset($row->locked)) $parent->locked = $row->locked;
+            if (isset($row->renderer)) $parent->renderer = $row->renderer;
+
             if ($loadRenderedBody) {
                 if (is_null($row->body_html) || \Config::Get("DisablePageCache", false)) {
                     $this->base->currentTransaction = $trans;
@@ -206,11 +221,6 @@ class Pages extends Module {
                     $page->setWasCached(true);
                 }
             }
-            if (isset($row->summary)) $parent->summary = $row->summary;
-            if (isset($row->small_change)) $parent->small_change = $row->small_change;
-            if (isset($row->redirect_to)) $parent->redirect_to = $row->redirect_to;
-            if (isset($row->locked)) $parent->locked = $row->locked;
-            if (isset($row->renderer)) $parent->renderer = $row->renderer;
 
             if (strtolower($row->url) != strtolower($part)) {
                 $this->base->currentTransaction = $trans;

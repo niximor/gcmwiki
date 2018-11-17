@@ -29,6 +29,7 @@ $pp = function($page) use (&$pp) {
 	</div>
 
 	<div class="textarea">
+		<?php if ($Page->getRenderer() == "wiki" || is_null($Page->getRenderer())) { ?>
 		<ul class="toolbar">
 			<!-- Closing </li>s are missing intentionally because of gap that is created between elements. -->
 			<li><input type="button" class="flat"<?php if ($Page->getLocked() && !$Acl->page_admin) echo " disabled"; ?> name="bold" title="Bold" value="Bold" />
@@ -52,6 +53,12 @@ $pp = function($page) use (&$pp) {
 			</li>
 		</ul>
 		<div><textarea name="body"<?php if ($Page->getLocked() && !$Acl->page_admin) echo " readonly disabled"; ?>><?php if (isset($Form["body"])) echo htmlspecialchars($Form["body"]); else echo htmlspecialchars($Page->getBody_wiki()); ?></textarea></div>
+		<?php } else { ?>
+			<div>
+				<textarea name="body"<?php if ($Page->getLocked() && !$Acl->page_admin) echo " readonly disabled"; ?>><?php if (isset($Form["body"])) echo htmlspecialchars($Form["body"]); else echo htmlspecialchars($Page->getBody_wiki()); ?></textarea>
+			</div>
+		<?php } ?>
+
 		<?php if (isset($Errors["body"])) { echo "<ul>"; foreach ($Errors["body"] as $err) { echo "<li>".$err->message."</li>"; } echo "</ul>"; } ?>
 	</div>
 
@@ -63,9 +70,15 @@ $pp = function($page) use (&$pp) {
 	</div>
 	<?php } ?>
 
-	<!-- TODO: Renderer and template -->
+	<div>
+		<label for="renderer">Format:</label>
+        <select name="renderer">
+            <option value="wiki"<?php if ($Page->getRenderer() == "wiki") echo " selected"; ?>>Wiki</option>
+            <option value="markdown"<?php if ($Page->getRenderer() == "markdown") echo " selected"; ?>>Markdown</option>
+        </select>
+	</div>
 
-	<div class="nogrid fullwidth">
+	<div class="fullwidth">
 		<label for="summary">Summary:</label>
 		<div style="float: right" class="nofull">
 			<label class="checkbox"><input type="checkbox" name="small_change"<?php if (isset($Form["small_change"])) echo " checked=\"checked\""; ?> /> Small change</label>
