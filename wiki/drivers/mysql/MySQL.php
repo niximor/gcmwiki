@@ -29,11 +29,21 @@ class Config {
 	}
 
 	public function link() {
-		if (!$this->connected) {
-			$this->link = @new \mysqli($this->host, $this->user, $this->password, $this->database);
-			if ($this->link->connect_error) {
-				throw new ConnectException($this->link, $this->getConnectionString());
-			}
+        if (!$this->connected) {
+            $tries = 5;
+            while ($tries > 0) {
+    			$this->link = @new \mysqli($this->host, $this->user, $this->password, $this->database);
+                if ($this->link->connect_error) {
+                    --$tries;
+                    usleep(50000);
+                } else {
+                    break;
+                }
+            }
+
+  			if ($this->link->connect_error) {
+   				throw new ConnectException($this->link, $this->getConnectionString());
+   			}
 
 			$this->link->autocommit = false;
 

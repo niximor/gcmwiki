@@ -14,7 +14,7 @@ class Attachment {
         $be = \Config::Get("__Backend");
         $at = $be->getAttachmentsModule();
 
-        $filter = new \lib\Object();
+        $filter = new \lib\XObject();
 
         if (!isset($params[1])) {
             return;

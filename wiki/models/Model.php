@@ -2,9 +2,9 @@
 
 namespace models;
 
-require_once "lib/Object.php";
+require_once "lib/XObject.php";
 
-class Model extends \lib\Object {
+class Model extends \lib\XObject {
     protected $_changed = array();
 
     public function __get($name) {

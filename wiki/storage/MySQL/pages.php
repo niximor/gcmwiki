@@ -881,7 +881,7 @@ class Pages extends Module {
      *     - int $totalCount Total number of pages not affecting the limit and offset.
      *     - array $pages WikiPages matching current filter criteria.
      */
-    function listPages(\lib\Object $filter) {
+    function listPages(\lib\XObject $filter) {
         $columns = array();
         $values = array();
         $joins = array();

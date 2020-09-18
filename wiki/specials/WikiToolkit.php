@@ -723,7 +723,7 @@ class WikiToolkit extends SpecialController {
 			$child->addVariable("CurrentSort", $sort);
 			$child->addVariable("CurrentDirection", $dir);
 
-			$filter = new \lib\Object();
+			$filter = new \lib\XObject();
 			$child->addVariable("Pages", $be->listPages($filter
 				->setLetter($selectedLetter)
 				->setLimit($limit)

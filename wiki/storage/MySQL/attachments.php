@@ -29,7 +29,7 @@ class Attachments extends Module implements \storage\Attachments {
      *         "meta:*": Meta information with specified name
      *         meta: All meta information available for attachment
      */
-    public function load(\lib\Object $filter, $features = NULL) {
+    public function load(\lib\XObject $filter, $features = NULL) {
         $columns = array();
 
         $joins = array();

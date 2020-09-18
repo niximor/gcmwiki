@@ -94,7 +94,7 @@ class MySQL implements Storage {
      *     - int $limit Number of pages.
      *     - int $offset Offset of paging.
      */
-    public function listPages(\lib\Object $filter) {
+    public function listPages(\lib\XObject $filter) {
         return $this->base->pages->listPages($filter);
     }
 

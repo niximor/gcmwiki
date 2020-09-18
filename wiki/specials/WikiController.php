@@ -42,7 +42,7 @@ class WikiController extends SpecialController {
 			if ($this->Acl->page_read && (is_null($redirect) || $aclRedirect->page_read)) {
 				$comments = $be->loadComments($this->relatedPage);
 
-				$filter = new \lib\Object();
+				$filter = new \lib\XObject();
 				$attachments = $be->getAttachmentsModule()->load(
 					$filter->setRelatedPageId($this->relatedPage->getId()),
 					array("id", "name", "type_string")
@@ -337,7 +337,7 @@ class WikiController extends SpecialController {
 			$this->relatedPage = $be->loadPage($path, NULL, NULL, false);
 			$this->Acl = $be->loadPageAcl($this->relatedPage, \lib\CurrentUser::i());
 
-			$filter = new \lib\Object();
+			$filter = new \lib\XObject();
 			$ref = $be->listPages($filter->setLinksTo($this->relatedPage->getId()));
 
 			$child = new \view\Template("page/references.php");

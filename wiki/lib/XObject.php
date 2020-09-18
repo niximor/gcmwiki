@@ -2,7 +2,7 @@
 
 namespace lib;
 
-class Object {
+class XObject {
     private $reflection;
 
     private static function methodToProperty($name) {

@@ -43,7 +43,6 @@ trait ListTrait
 	protected function consumeOl($lines, $current)
 	{
 		// consume until newline
-
 		$block = [
 			'list',
 			'list' => 'ol',
@@ -59,7 +58,6 @@ trait ListTrait
 	protected function consumeUl($lines, $current)
 	{
 		// consume until newline
-
 		$block = [
 			'list',
 			'list' => 'ul',

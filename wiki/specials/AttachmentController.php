@@ -62,7 +62,7 @@ class AttachmentController extends SpecialController {
         $at = $this->getBackend()->getAttachmentsModule();
 
         // Find the attachment based on related_page_id and name.
-        $filter = new \lib\Object();
+        $filter = new \lib\XObject();
         $attachments = $at->load($filter
             ->setRelatedPageId($this->relatedPage->getId())
             ->setName($name), array("id", "name", "bytes", "created", "type_string", "width", "height"));
@@ -131,7 +131,7 @@ class AttachmentController extends SpecialController {
 
         $at = $this->getBackend()->getAttachmentsModule();
 
-        $filter = new \lib\Object();
+        $filter = new \lib\XObject();
         $attachments = $at->load($filter
             ->setRelatedPageId($this->relatedPage->getId())
             ->setName($name), array("id", "meta:".\models\Attachment::META_CONTENT_TYPE, "type_string"));

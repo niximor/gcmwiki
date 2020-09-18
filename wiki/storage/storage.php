@@ -162,7 +162,7 @@ interface Storage {
      *     - int $limit Number of pages.
      *     - int $offset Offset of paging.
      */
-    function listPages(\lib\Object $filter);
+    function listPages(\lib\XObject $filter);
 
 	function storePageAcl(\models\WikiPage $page, \models\WikiAclSet $set);
 
@@ -217,7 +217,7 @@ interface Attachments {
      * @param features List of features to load
      * @param revision Load older revision. If NULL, loads most recent revision.
      */
-    function load(\lib\Object $filter, $features = NULL);
+    function load(\lib\XObject $filter, $features = NULL);
 
     /**
      * Store attachment meta information (not the data itself).
