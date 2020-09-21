@@ -1,0 +1,36 @@
+<?php
+
+function getenv_d($name, $default=NULL) {
+    $val = $_ENV[$name] ?? $default;
+    if (empty($val)) {
+        return $default;
+    } else {
+        return $val;
+    }
+}
+
+function str2bool($str) {
+    if (strtolower($str) == "true" || $str == "1" || strtolower($str) == "on") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Database backend to use
+Config::Set("Backend", getenv_d("WIKI_BACKEND", "\\storage\\MySQL"));
+
+// Backend to use for storing attachments
+Config::Set("StorageBackend", getenv_d("WIKI_STORAGE", "\\storage\\FileSystem\\DataStore"));
+
+// Connection to MySQL database.
+Config::Set("MySQLMaster", array(
+	"host" => getenv_d("MYSQL_HOST", "localhost"), // Database host
+	"user" => getenv_d("MYSQL_USER", "root"), // Database user
+	"password" => getenv_d("MYSQL_PASSWORD", ""), // Database password
+	"database" => getenv_d("MYSQL_DB", "gcmwiki") // Database name
+));
+
+// Set debug to false in production environment!
+Config::Set("debug", str2bool(getenv_d("DEBUG", "false")));
+
