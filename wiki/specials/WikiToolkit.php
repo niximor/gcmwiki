@@ -9,6 +9,11 @@ require_once "lib/Observer.php";
 require_once "view/Template.php";
 
 class WikiToolkit extends SpecialController {
+    public function liveness() {
+        echo "OK";
+        exit;
+    }
+
 	public function login() {
 		if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["username"]) && isset($_POST["password"])) {
 			$user = \lib\CurrentUser::Verify($_POST["username"], $_POST["password"]);
